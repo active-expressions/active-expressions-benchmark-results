@@ -30,6 +30,7 @@ function boxPlot(data, {
 	yTickCount = 4,
 	xAxisLabelOffset = 50
 }) {
+
 	var chart = d3.box()
 		.whiskers(iqr(1.5))
 		.height(height)
@@ -263,10 +264,22 @@ function preprocessJson(json) {
     return benchmarkData;
 }
 
+function arrayEquals(a1, a2) {
+	if (!Array.isArray(a1) || !Array.isArray(a2)) {
+		return false;
+	}
+
+	if (a1.length !== a2.length) {
+		return false;
+	}
+
+	return a1.every(((value, index) => value === a2[index]));
+}
+
 function getSuiteData(json, suiteNames) {
     var suites = json.suites;
     var aspectRatios = suites
-        .filter(suite => _.isEqual(suite.suite.slice(0, suiteNames.length), suiteNames))
+		.filter(suite => arrayEquals(suite.suite.slice(0, suiteNames.length), suiteNames))
         .map(suite => suite.title);
         //.filter(bench => bench.name !== 'Compilation');
 
@@ -279,8 +292,6 @@ function getSuiteData(json, suiteNames) {
 
 function chartForSuite(benchmarkData, suiteNames) {
     var data = getSuiteData(benchmarkData, suiteNames);
-
-	//_.isEqual(suite.suite.slice(0, suiteNames.length), suiteNames)
 
     boxPlot(data, {
         id: createChartParentAndReturnId(),
@@ -746,7 +757,7 @@ function initializeHistoryBox(historyBox) {
 }
 
 //d3.json("benchmarks/latest.json", doChartsFromJson);
-d3.json('benchmarks/paper_aeabbbfrm/overview.json', doChartsFromJson);
+//d3.json('benchmarks/paper_aeabbbfrm/overview.json', doChartsFromJson);
 
 // Benchmarks for paper: Active Expressions as basic Building Block for Reactive Mechanisms
 function paperBenchmark(label, directory) {
@@ -771,22 +782,30 @@ function paperOverviewBenchmark() {
 
 	d3.json(filePath, initializeHistoryBox(historyBox));
 }
-
 paperOverviewBenchmark();
-paperBenchmark('AExpr Construction', 'construction');
-paperBenchmark('AExpr Update', 'update');
-paperBenchmark('Rewriting Impact', 'rewriting_impact');
-paperBenchmark('Rewriting vs Interpretation', 'rewriting_vs_interpretation');
 
-// Travis Build History
-fetch('benchmarks/results')
-	.then(resp => resp.text())
-	.then(t => {
-		let history = createHistory('Travis Builds');
-		let files = t.match(/[^\r\n]+/g);
-		files.forEach(file => {
-			let historyBox = createHistoryBox(file, history);
+d3.json('benchmarks/results.json', json => {
 
-			d3.json('benchmarks/history/' + file, initializeHistoryBox(historyBox));
-		});
+	const data = json.map(bench => {
+		const name = bench.name;
+		const values = bench.executions.flatMap(e => {
+			return e.iterations.map(i => i.elapsed);
+		})
+		return [name, values];
 	});
+
+	const margin = Object.assign({}, defaultMargin, {top: 10}),
+		width = 800 - margin.left - margin.right,
+		height = 400 - margin.top - margin.bottom;
+	boxPlot(data, {
+		id: createChartParentAndReturnId(),
+		title: 'TITLE',
+		benchName: 'BENCHNAME',
+		// min: 0,//tickingAndRewritingMin,
+		// max: 10,//tickingAndRewritingMax,
+		margin,
+		width,
+		height,
+		// numberOfElementsPerChunk: 2
+	});
+});
