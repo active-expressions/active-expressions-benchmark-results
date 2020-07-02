@@ -1,0 +1,9 @@
+.svg-crowbar {
+    padding: 3px 8px;
+    font-size: 12px;
+    font-weight: bold;
+    text-decoration: none;
+    border-radius: 1em;
+    background: #666;
+    color: white;
+}

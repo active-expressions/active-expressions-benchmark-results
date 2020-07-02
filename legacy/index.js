@@ -757,14 +757,16 @@ function initializeHistoryBox(historyBox) {
     };
 }
 
+const BENCHMARKS_PATH = '../benchmarks/';
+
 //d3.json("benchmarks/latest.json", doChartsFromJson);
-d3.json('benchmarks/paper_aeabbbfrm/overview.json', doChartsFromJson);
+d3.json(BENCHMARKS_PATH + 'paper_aeabbbfrm/overview.json', doChartsFromJson);
 
 // Benchmarks for paper: Active Expressions as basic Building Block for Reactive Mechanisms
 function paperBenchmark(label, directory) {
 	let history = createHistory(label);
 	function historyBoxFor(fileName) {
-		let filePath = `benchmarks/paper_aeabbbfrm/${directory}/${fileName}`;
+		let filePath = `../benchmarks/paper_aeabbbfrm/${directory}/${fileName}`;
 		let historyBox = createHistoryBox(fileName, history);
 
 		d3.json(filePath, initializeHistoryBox(historyBox));
@@ -778,7 +780,7 @@ function paperBenchmark(label, directory) {
 
 function paperOverviewBenchmark() {
 	let history = createHistory('Paper Benchmark (Overview)');
-	let filePath = `benchmarks/paper_aeabbbfrm/overview.json`;
+	let filePath = BENCHMARKS_PATH + `paper_aeabbbfrm/overview.json`;
 	let historyBox = createHistoryBox('overview.json', history);
 
 	d3.json(filePath, initializeHistoryBox(historyBox));
@@ -791,7 +793,7 @@ paperBenchmark('Rewriting Impact', 'rewriting_impact');
 paperBenchmark('Rewriting vs Interpretation', 'rewriting_vs_interpretation');
 
 // Travis Build History
-fetch('benchmarks/results')
+fetch(BENCHMARKS_PATH + 'results')
 	.then(resp => resp.text())
 	.then(t => {
 		let history = createHistory('Travis Builds');
@@ -799,6 +801,6 @@ fetch('benchmarks/results')
 		files.forEach(file => {
 			let historyBox = createHistoryBox(file, history);
 
-			d3.json('benchmarks/history/' + file, initializeHistoryBox(historyBox));
+			d3.json(BENCHMARKS_PATH + 'history/' + file, initializeHistoryBox(historyBox));
 		});
 	});
