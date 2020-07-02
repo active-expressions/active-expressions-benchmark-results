@@ -35,7 +35,7 @@ d3.box = function() {
 
       // Compute whiskers. Must return exactly 2 elements, or null.
       var whiskerIndices = whiskers && whiskers.call(this, d, i),
-          whiskerData = whiskerIndices && whiskerIndices.map(function(i) { return d[i]; });
+          whiskerData = whiskerIndices && whiskerIndices.map(i => d[i]);
 
       // Compute outliers. If no whiskers are specified, all data are "outliers".
       // We compute the outliers as indices, so that we can join across transitions!
@@ -70,27 +70,27 @@ d3.box = function() {
       center.enter().insert("line", "rect")
           .attr("class", "center")
           .attr("x1", width / 2)
-          .attr("y1", function(d) { return x0(d[0]); })
+          .attr("y1", d => x0(d[0]))
           .attr("x2", width / 2)
-          .attr("y2", function(d) { return x0(d[1]); })
+          .attr("y2", d => x0(d[1]))
           .style("opacity", 1e-6)
         .transition()
           .duration(duration)
           .style("opacity", 1)
-          .attr("y1", function(d) { return x1(d[0]); })
-          .attr("y2", function(d) { return x1(d[1]); });
+          .attr("y1", d => x1(d[0]))
+          .attr("y2", d => x1(d[1]));
 
       center.transition()
           .duration(duration)
           .style("opacity", 1)
-          .attr("y1", function(d) { return x1(d[0]); })
-          .attr("y2", function(d) { return x1(d[1]); });
+          .attr("y1", d => x1(d[0]))
+          .attr("y2", d => x1(d[1]));
 
       center.exit().transition()
           .duration(duration)
           .style("opacity", 1e-6)
-          .attr("y1", function(d) { return x1(d[0]); })
-          .attr("y2", function(d) { return x1(d[1]); })
+          .attr("y1", d => x1(d[0]))
+          .attr("y2", d => x1(d[1]))
           .remove();
 
       // Update innerquartile box.
@@ -100,18 +100,18 @@ d3.box = function() {
       box.enter().append("rect")
           .attr("class", "box")
           .attr("x", 0)
-          .attr("y", function(d) { return x0(d[2]); })
+          .attr("y", d => x0(d[2]))
           .attr("width", width)
-          .attr("height", function(d) { return x0(d[0]) - x0(d[2]); })
+          .attr("height", d => x0(d[0]) - x0(d[2]))
         .transition()
           .duration(duration)
-          .attr("y", function(d) { return x1(d[2]); })
-          .attr("height", function(d) { return x1(d[0]) - x1(d[2]); });
+          .attr("y", d => x1(d[2]))
+          .attr("height", d => x1(d[0]) - x1(d[2]));
 
       box.transition()
           .duration(duration)
-          .attr("y", function(d) { return x1(d[2]); })
-          .attr("height", function(d) { return x1(d[0]) - x1(d[2]); });
+          .attr("y", d => x1(d[2]))
+          .attr("height", d => x1(d[0]) - x1(d[2]));
 
       // Update whiskers.
       var whisker = g.selectAll("line.whisker")
@@ -121,7 +121,7 @@ d3.box = function() {
           .attr("class", "whisker")
           .attr("x1", 0)
           .attr("y1", x0)
-          .attr("x2", 0 + width)
+          .attr("x2", width)
           .attr("y2", x0)
           .style("opacity", 1e-6)
         .transition()
@@ -151,21 +151,21 @@ d3.box = function() {
           .attr("class", "outlier")
           .attr("r", 3)
           .attr("cx", width / 2)
-          .attr("cy", function(i) { return x0(d[i]); })
+          .attr("cy", i => x0(d[i]))
           .style("opacity", 1e-6)
         .transition()
           .duration(duration)
-          .attr("cy", function(i) { return x1(d[i]); })
+          .attr("cy", i => x1(d[i]))
           .style("opacity", 1);
 
       outlier.transition()
           .duration(duration)
-          .attr("cy", function(i) { return x1(d[i]); })
+          .attr("cy", i => x1(d[i]))
           .style("opacity", 1);
 
       outlier.exit().transition()
           .duration(duration)
-          .attr("cy", function(i) { return x1(d[i]); })
+          .attr("cy", i => x1(d[i]))
           .style("opacity", 1e-6)
           .remove();
 
@@ -179,10 +179,10 @@ d3.box = function() {
 
         //Add SVG Text Element Attributes
         var textLabels = aboveOutlier
-            .attr("x", function(d) { return width / 2})
-            .attr("y", function(d) { return x1(domain()[1]); })
+            .attr("x", d => width / 2)
+            .attr("y", d => x1(domain()[1]))
             .html(d => '⬆ ' + d)
-            .attr("text-anchor", function(d, i) { return "middle"; })
+            .attr("text-anchor", (d, i) => "middle")
       }
 
       // Update median line.
@@ -215,10 +215,10 @@ d3.box = function() {
       boxTick.enter().append("text")
           .attr("class", "box")
           .attr("dy", ".3em")
-          .attr("dx", function(d, i) { return i & 1 ? 6 : -6 })
-          .attr("x", function(d, i) { return i & 1 ?  + width : 0 })
+          .attr("dx", (d, i) => i & 1 ? 6 : -6)
+          .attr("x", (d, i) => i & 1 ? +width : 0)
           .attr("y", x0)
-          .attr("text-anchor", function(d, i) { return i & 1 ? "start" : "end"; })
+          .attr("text-anchor", (d, i) => i & 1 ? "start" : "end")
           .text(format)
         .transition()
           .duration(duration)
