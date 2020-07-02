@@ -784,16 +784,28 @@ function paperOverviewBenchmark() {
 }
 paperOverviewBenchmark();
 
-d3.json('benchmarks/results.json', json => {
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
 
-	const data = json.map(bench => {
-		const name = bench.name;
-		const values = bench.executions.flatMap(e => {
-			return e.iterations.map(i => i.elapsed);
+function createChart(json, config = json.config) {
+	const name = json.name;
+	const variations = json.variations;
+	const data = variations
+		.filter(variation => {
+			return Object.entries(variation.parameters).every(([key, value]) => config[key] && config[key].includes(value))
 		})
-		return [name, values];
-	});
+		.map(variation => {
+			const params = Object.entries(variation.parameters).reduce(((acc, [key, value]) => `${acc}, ${key}:${value}`))
+			const values = variation.executions.flatMap(e => {
+				return e.iterations.map(i => i.elapsed);
+			})
+			return [name + '\n' + params, values];
+		});
 
+	resetParent();
 	const margin = Object.assign({}, defaultMargin, {top: 10}),
 		width = 800 - margin.left - margin.right,
 		height = 400 - margin.top - margin.bottom;
@@ -808,4 +820,66 @@ d3.json('benchmarks/results.json', json => {
 		height,
 		// numberOfElementsPerChunk: 2
 	});
+}
+
+d3.json('../active-expressions-benchmark/results/2020-06-26_11-38-40/aexpr-and-callback-count.rewriting.json', json => {
+	newJSON(json);
+
+	document.querySelector('#generate').addEventListener('click', () => {
+		createChart(json, getConfig());
+	});
+
+	createChart(json);
 });
+
+function newJSON(json) {
+	const config = document.querySelector('#config');
+
+	const list = document.createElement('dl');
+
+	const d = Object.entries(json.config)
+		.flatMap(([key, values]) => {
+			const dt = document.createElement('dt');
+			dt.innerHTML = key;
+
+			const dd = document.createElement('dd');
+			const ul = document.createElement('ul');
+			dd.append(ul);
+
+			ul.append(...values.map(value => {
+				const li = document.createElement('li');
+				const checkBox = document.createElement('input');
+				checkBox.type = 'checkbox';
+				checkBox.id = value;
+				checkBox.checked = true;
+				const label = document.createElement('label');
+				label.setAttribute('for', value);
+				label.innerHTML = JSON.stringify(value);
+				li.append(checkBox, label);
+				return li;
+			}));
+
+			return [dt, dd];
+		});
+
+	list.append(...d);
+	config.append(list)
+}
+
+function getConfig() {
+	const config = document.querySelector('#config');
+
+	const keys = Array.from(config.querySelectorAll('dl dt')).map(e => e.innerHTML);
+	const labels = Array.from(config.querySelectorAll('dl dd')).map(dd => {
+		return Array.from(dd.querySelectorAll('li'))
+			.filter(li => li.querySelector('input').checked)
+			.map(li => JSON.parse(li.querySelector('label').innerHTML));
+	});
+
+	const params = {};
+	keys.forEach((key, index) => {
+		params[key] = labels[index];
+	})
+	return params;
+}
+
