@@ -824,13 +824,14 @@ async function onDrop(evt, url) {
 
 	const files = evt.dataTransfer.files;
 	if (files && files.length > 0) {
-		Array.from(files).forEach(async file => {
+		const textPromises = Array.from(files).map(async file => {
 			const dataURL = await readBlobAsDataURL(file);
 			const blob = await fetch(dataURL).then(r => r.blob());
 			const text = await blob.text();
-
-			newJSON(JSON.parse(text));
+			return JSON.parse(text);
 		});
+		const jsons = await Promise.all(textPromises);
+		newJSON(jsons);
 	} else {
 		const data = evt.dataTransfer.getData("text");
 		if (data) {
@@ -849,27 +850,31 @@ async function onDrop(evt, url) {
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-function createChart(json, config = json.config) {
-	const name = json.name;
-	const variations = json.variations;
-	const data = variations
-		.filter(variation => {
-			return Object.entries(variation.parameters).every(([key, value]) => config[key] && config[key].includes(value))
-		})
-		.map(variation => {
-			const params = Object.entries(variation.parameters).reduce(((acc, [key, value]) => `${acc}, ${key}:${value}`))
-			const values = variation.executions.flatMap(e => {
-				return e.iterations.map(i => i.elapsed);
+function createChart(jsons, config = jsons[0].config) {
+	const data2 = jsons.flatMap(json => {
+		const name = json.name;
+		const variations = json.variations;
+		const data = variations
+			.filter(variation => {
+				return Object.entries(variation.parameters).every(([key, value]) => config[key] && config[key].includes(value))
+			})
+			.map(variation => {
+				const params = Object.entries(variation.parameters).reduce(((acc, [key, value]) => `${acc}, ${key}:${value}`))
+				const values = variation.executions.flatMap(e => {
+					return e.iterations.map(i => i.elapsed);
+				});
+				return [name + '\n' + params, values];
 			});
-			return [name + '\n' + params, values];
-		});
 
+		return data;
+	})
+debugger
 	resetParent();
 
 	const margin = Object.assign({}, defaultMargin, {top: 10}),
 		width = 800 - margin.left - margin.right,
 		height = 400 - margin.top - margin.bottom;
-	boxPlot(data, {
+	boxPlot(data2, {
 		id: createChartParentAndReturnId(),
 		title: 'TITLE',
 		benchName: 'BENCHNAME',
@@ -882,12 +887,22 @@ function createChart(json, config = json.config) {
 	});
 }
 
-function newJSON(json) {
-	uiForConfig(json);
-	createChart(json);
+function newJSON(jsons) {
+	uiForConfig(jsons[0]);
+	createChart(jsons);
 }
 
-d3.json('../active-expressions-benchmark/results/2020-063-26_11-38-40/aexpr-and-callback-count.rewriting.json', newJSON);
+(async function init(paths) {
+	const jsons = await Promise.all(paths.map(path => new Promise((resolve, reject) => d3.json(path, resolve))));
+	newJSON(jsons);
+})([
+	'../active-expressions-benchmark/results/2020-06-26_11-21-30/aexpr-construction.different-object.interpretation.json',
+	'../active-expressions-benchmark/results/2020-06-26_11-21-30/aexpr-construction.different-object.proxies.json',
+	'../active-expressions-benchmark/results/2020-06-26_11-21-30/aexpr-construction.different-object.rewriting.json',
+	'../active-expressions-benchmark/results/2020-06-26_11-21-30/aexpr-construction.different-object.ticking.json',
+]);
+
+// d3.json('../active-expressions-benchmark/results/2020-063-26_11-38-40/aexpr-and-callback-count.rewriting.json', newJSON);
 
 function onGenerate() {
 	alert('no data to display yet.');
@@ -900,7 +915,7 @@ function uiForConfig(json) {
 	config.innerHTML = '';
 
 	onGenerate = () => {
-		createChart(json, getConfig());
+		createChart([json], getConfig());
 	};
 
 	const list = document.createElement('dl');
@@ -932,7 +947,12 @@ function uiForConfig(json) {
 		});
 
 	list.append(...d);
-	config.append(list);
+	const div = document.createElement('div');
+	const name = document.createElement('span');
+	name.style.fontWeight = 'bold';
+	name.innerHTML = json.name;
+	div.append(name, list);
+	config.append(div);
 }
 
 function getConfig() {
