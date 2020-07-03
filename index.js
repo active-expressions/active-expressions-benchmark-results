@@ -1,4 +1,5 @@
 import './lodash.js';
+import { uuid } from './utils.js';
 
 var labels = true; // show the text labels beside individual boxplots?
 
@@ -852,10 +853,11 @@ function newJSON(json) {
 				const li = document.createElement('li');
 				const checkBox = document.createElement('input');
 				checkBox.type = 'checkbox';
-				checkBox.id = value;
+				const id = 'id-' + uuid();
+				checkBox.id = id;
 				checkBox.checked = true;
 				const label = document.createElement('label');
-				label.setAttribute('for', value);
+				label.setAttribute('for', id);
 				label.innerHTML = JSON.stringify(value);
 				li.append(checkBox, label);
 				return li;
