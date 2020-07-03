@@ -796,7 +796,58 @@ paperOverviewBenchmark();
 const dropArea = document.querySelector('#drop-area');
 dropArea.addEventListener('dragenter', evt => dropArea.classList.add("drag"), false);
 dropArea.addEventListener('dragleave', evt => dropArea.classList.remove("drag"), false);
-dropArea.addEventListener('drop', evt => dropArea.classList.remove("drag"));
+dropArea.addEventListener("drop", evt => onDrop(evt))
+dropArea.addEventListener("dragover", evt => onDragOver(evt))
+
+function onDragOver(evt) {
+	const mode = evt.shiftKey ? "move" : "copy";
+
+	evt.dataTransfer.dropEffect = mode;
+	dropArea.transferMode = mode;
+
+	evt.preventDefault();
+}
+
+async function onDrop(evt, url) {
+	dropArea.classList.remove("drag");
+
+	evt.preventDefault();
+	evt.stopPropagation();
+
+	function readBlobAsDataURL(fileOrBlob) {
+		return new Promise(resolve => {
+			const reader = new FileReader();
+			reader.onload = event => resolve(event.target.result);
+			reader.readAsDataURL(fileOrBlob);
+		});
+	}
+
+	const files = evt.dataTransfer.files;
+	if (files && files.length > 0) {
+		Array.from(files).forEach(async file => {
+			const dataURL = await readBlobAsDataURL(file);
+			const blob = await fetch(dataURL).then(r => r.blob());
+			const text = await blob.text();
+
+			newJSON(JSON.parse(text));
+		});
+	} else {
+		const data = evt.dataTransfer.getData("text");
+		if (data) {
+			dropArea.append(data);
+		} else {
+			alert('drop contained no files or text data');
+		}
+	}
+
+	return true;
+}
+
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
 
 function createChart(json, config = json.config) {
 	const name = json.name;
@@ -814,6 +865,7 @@ function createChart(json, config = json.config) {
 		});
 
 	resetParent();
+
 	const margin = Object.assign({}, defaultMargin, {top: 10}),
 		width = 800 - margin.left - margin.right,
 		height = 400 - margin.top - margin.bottom;
@@ -830,18 +882,26 @@ function createChart(json, config = json.config) {
 	});
 }
 
-d3.json('../active-expressions-benchmark/results/2020-06-26_11-38-40/aexpr-and-callback-count.rewriting.json', json => {
-	newJSON(json);
-
-	document.querySelector('#generate').addEventListener('click', () => {
-		createChart(json, getConfig());
-	});
-
-	createChart(json);
-});
-
 function newJSON(json) {
+	uiForConfig(json);
+	createChart(json);
+}
+
+d3.json('../active-expressions-benchmark/results/2020-063-26_11-38-40/aexpr-and-callback-count.rewriting.json', newJSON);
+
+function onGenerate() {
+	alert('no data to display yet.');
+}
+
+document.querySelector('#generate').addEventListener('click', () => onGenerate());
+
+function uiForConfig(json) {
 	const config = document.querySelector('#config');
+	config.innerHTML = '';
+
+	onGenerate = () => {
+		createChart(json, getConfig());
+	};
 
 	const list = document.createElement('dl');
 
