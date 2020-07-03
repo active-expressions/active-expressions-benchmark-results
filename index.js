@@ -793,6 +793,11 @@ paperOverviewBenchmark();
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
+const dropArea = document.querySelector('#drop-area');
+dropArea.addEventListener('dragenter', evt => dropArea.classList.add("drag"), false);
+dropArea.addEventListener('dragleave', evt => dropArea.classList.remove("drag"), false);
+dropArea.addEventListener('drop', evt => dropArea.classList.remove("drag"));
+
 function createChart(json, config = json.config) {
 	const name = json.name;
 	const variations = json.variations;
@@ -804,7 +809,7 @@ function createChart(json, config = json.config) {
 			const params = Object.entries(variation.parameters).reduce(((acc, [key, value]) => `${acc}, ${key}:${value}`))
 			const values = variation.executions.flatMap(e => {
 				return e.iterations.map(i => i.elapsed);
-			})
+			});
 			return [name + '\n' + params, values];
 		});
 

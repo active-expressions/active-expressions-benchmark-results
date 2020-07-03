@@ -8,10 +8,20 @@
 <link rel="stylesheet" type="text/css" media="screen" href="tooltip.css">
 <link rel="stylesheet" type="text/css" media="screen" href="svg-crowdar.css">
 <link rel="stylesheet" type="text/css" media="screen" href="errors.css">
+<link rel="stylesheet" type="text/css" media="screen" href="drop-aera.css">
 <body>
+
 <h1>Active Expressions Runtime Benchmarks</h1>
+
+<div id="drop-area">
+    <span class="no-drag">Drop Area</span>
+    <span class="on-drag">Drop Here</span>
+</div>
+
 <a class="svg-crowbar" href="javascript:javascript: (function () { var e = document.createElement('script'); e.setAttribute('src', 'https://nytimes.github.io/svg-crowbar/svg-crowbar.js'); e.setAttribute('class', 'svg-crowbar'); document.body.appendChild(e); })();">Export Charts</a>&nbsp;
+
 <div id="info"></div>
+
 <div id="charts">
     <div id="chart"></div>
 </div>
@@ -24,3 +34,4 @@
 <script src="d3.v3.js"></script>
 <script src="box.js"></script>
 <script src="index.js" type="module"></script>
+</body>
