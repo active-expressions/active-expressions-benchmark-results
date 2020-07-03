@@ -1,3 +1,5 @@
+import './lodash.js';
+
 var labels = true; // show the text labels beside individual boxplots?
 
 const TICKING_NAME = 'Convention',
@@ -5,7 +7,7 @@ const TICKING_NAME = 'Convention',
 	REWRITING_NAME = 'Compilation';
 
 // show labels checkbox
-var showLabelsId = 'showLabels';
+const showLabelsId = 'showLabels';
 (() => {
 	let container = document.createElement('div');
 	container.innerHTML = `<label> <input id="${showLabelsId}" type="checkbox" name="zutat" value="salami" checked> Show Labels </label><br /><br />`;
@@ -863,7 +865,7 @@ function newJSON(json) {
 		});
 
 	list.append(...d);
-	config.append(list)
+	config.append(list);
 }
 
 function getConfig() {
@@ -876,10 +878,5 @@ function getConfig() {
 			.map(li => JSON.parse(li.querySelector('label').innerHTML));
 	});
 
-	const params = {};
-	keys.forEach((key, index) => {
-		params[key] = labels[index];
-	})
-	return params;
+	return _.fromPairs(_.zip(keys, labels));
 }
-
