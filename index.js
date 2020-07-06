@@ -591,7 +591,7 @@ async function onDrop(evt, url) {
 // ------------------------------------------------------------------------------------------------------------
 
 function createChart(jsons, config = jsons[0].config) {
-	const data2 = jsons.flatMap(json => {
+	const data2 = jsons.flatMap((json, id) => {
 		const name = json.name;
 		const variations = json.variations;
 		const data = variations
@@ -642,24 +642,13 @@ function newJSON(jsons) {
 	'./benchmarks/example/aexpr-construction.different-object.ticking.json',
 ]);
 
-// d3.json('../active-expressions-benchmark/results/2020-063-26_11-38-40/aexpr-and-callback-count.rewriting.json', newJSON);
-
 function onGenerate() {
 	alert('no data to display yet.');
 }
 
 document.querySelector('#generate').addEventListener('click', () => onGenerate());
 
-function uiForConfig(jsons) {
-	const json = jsons[0];
-
-	const config = document.querySelector('#config');
-	config.innerHTML = '';
-
-	onGenerate = () => {
-		createChart(jsons, getConfig());
-	};
-
+function buildUIForBenchConfig(json, config) {
 	const list = document.createElement('dl');
 
 	const d = Object.entries(json.config)
@@ -695,6 +684,23 @@ function uiForConfig(jsons) {
 	name.innerHTML = json.name;
 	div.append(name, list);
 	config.append(div);
+}
+
+function uiForConfig(jsons) {
+	const json = jsons[0];
+
+	const container = document.querySelector('#config');
+	container.innerHTML = '';
+
+	onGenerate = () => {
+		createChart(jsons, getConfig());
+	};
+
+	jsons.forEach(json => {
+		const parent = document.createElement('div');
+		container.append(parent);
+		buildUIForBenchConfig(json, parent);
+	})
 }
 
 function getConfig() {
