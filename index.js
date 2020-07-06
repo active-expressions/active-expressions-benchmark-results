@@ -306,11 +306,6 @@ function chartForSuite(benchmarkData, suiteNames) {
 		)), -Infinity)
     });
 }
-
-function minMaxThenCreateChart() {
-
-}
-
 function AEXPR_CONSTRUCTION_CHART(benchmarkData) {
     let unnormalizedDataCopy = copyJson(benchmarkData);
 	let dataDiff = getSuiteData(benchmarkData, ['AExpr Construction', 'Different Object']),
@@ -527,266 +522,11 @@ function AEXPR_UPDATE_CHART(benchmarkData) {
 
     chartForSuite(unnormalizedDataCopy, ['Maintain Aspect Ratio']);
 }
-
-function INTERPRETATION_VS_REWRITING(benchmarkData) {
-	benchmarkData = copyJson(benchmarkData);
-    let rewritingDataCopy = copyJson(benchmarkData);
-    let interpretationDataCopy = copyJson(benchmarkData);
-
-    let rewritingData = getSuiteData(benchmarkData, ['AExpr and Callback Count (Compilation)']);
-	let interpretationData = getSuiteData(benchmarkData, ['AExpr and Callback Count (Interpretation)']);
-
-    if(rewritingData.length + interpretationData.length === 0) {
-        createFailureMessage(`
-<p>Unable to load Suite 'Compilation Transformation Impact': No Measurements available</p>
-`);
-        return;
-    }
-
-    // show medians and confidence intervals
-	let medianParent = document.getElementById(createChartParentAndReturnId());
-	medianParent.innerHTML = `
-<h2>Compilation vs Interpretation (varying #aexpr, 10 callbacks each):</h2>
- <table>
-  <tr>
-    <th>Size</th>
-    <th colspan="2">timing [ms]</th>
-    <th>relative slowdown</th>
-  </tr>
-  <tr>
-    <th></th>
-    <th>Compilation</th>
-    <th>Interpretation</th>
-    <th>Compilation vs Interpretation</th>
-  </tr>
-${rewritingData.map(rewritingDat => {
-		let name = rewritingDat[0];
-		let interpretationDat = interpretationData.find(dat => dat[0] === name);
-
-		return `<tr>
-    <td>${name}</td>
-    <td>${printMedian(rewritingDat)}</td>
-    <td>${printMedian(interpretationDat)}</td>
-    <td>${printRelativeSlowdown(rewritingDat, interpretationDat)}</td>
-  </tr>`;
-	}).join('')}
-</table>
-`;
-
-	// normalize data
-	let data = [];
-	interpretationData.forEach(interpretationDat => {
-		let name = interpretationDat[0];
-		let median = d3.median(interpretationDat[1]);
-		let rewritingDat = rewritingData.find(dat => dat[0] === name);
-
-		interpretationDat[0] = interpretationDat[0].split(' ')[0] +', Interpr.';
-		interpretationDat[1] = interpretationDat[1].map(val => val / median);
-        if(!rewritingDat) { return; }
-		rewritingDat[0] = rewritingDat[0].split(' ')[0] + ', Compilat.';
-		rewritingDat[1] = rewritingDat[1].map(val => val / median);
-
-		data.push(interpretationDat, rewritingDat);
-	});
-
-    let margin = Object.assign({}, defaultMargin, {top: 10}),
-        width = 800 - margin.left - margin.right,
-        height = 400 - margin.top - margin.bottom;
-	boxPlot(data.slice(-2*6), {
-		id: createChartParentAndReturnId(),
-		title: '',
-		benchName: 'Benchmark Size, Implementation Strategy',
-		yAxisText: 'Normalized Execution Time (Interpretation = 1.0)',
-		min:0,
-		max:3,
-		numberOfElementsPerChunk: 2,
-        margin,
-        width,
-        height
-	});
-
-    chartForSuite(rewritingDataCopy, ['AExpr and Callback Count (Compilation)']);
-    chartForSuite(interpretationDataCopy, ['AExpr and Callback Count (Interpretation)']);
-}
-
-function REWRITING_IMPACT(benchmarkData) {
-    benchmarkData = copyJson(benchmarkData);
-    let unnormalizedDataCopy = copyJson((benchmarkData));
-
-    let data = getSuiteData(benchmarkData, ['Compilation Transformation Impact']);
-
-    if(data.length <= 1) {
-        createFailureMessage(`
-<p>Unable to load Suite 'Compilation Transformation Impact': ${data.length} of 2 Measurements available</p>
-`);
-        return;
-    }
-
-    let baselineDat = data.find(dat => dat[0] === 'Baseline'),
-        rewritingDat = data.find(dat => dat[0] === 'Compilation'),
-        baselineMedian = d3.median(baselineDat[1]);
-
-    // show medians and confidence intervals
-    let medianParent = document.getElementById(createChartParentAndReturnId());
-    medianParent.innerHTML = `
-<h2>Compilation Transformation Impact (sorting a 10000 element array using quicksort)</h2>
-<ul> timing [ms]
-  <li>Baseline: ${printMedian(baselineDat)}</li>
-  <li>Compilation: ${printMedian(rewritingDat)}</li>
-Slowdown (Compilation vs Baseline): ${printRelativeSlowdown(rewritingDat, baselineDat)}
-</ul>
-`;
-
-    // normalize data
-    data.forEach(dat => {
-        dat[1] = dat[1].map(val => val / baselineMedian);
-    });
-
-    let margin = Object.assign({}, defaultMargin, {top: 10}),
-        width = 335 - margin.left - margin.right,
-        height = 400 - margin.top - margin.bottom;
-    boxPlot(data, {
-        id: createChartParentAndReturnId(),
-        title: '',
-        benchName: 'Implementation Strategy',
-        yAxisText: 'Normalized Execution Time (Baseline = 1.0)',
-        margin,
-        width,
-        height
-    });
-
-    chartForSuite(unnormalizedDataCopy, ['Compilation Transformation Impact']);
-}
-
 function createFailureMessage(message) {
     let medianParent = document.getElementById(createChartParentAndReturnId());
     medianParent.classList.add('failedSuite');
     medianParent.innerHTML = message;
 }
-
-function PARTIALLY_REWRITTEN(benchmarkData) {
-    const suiteNames = ['Partially Rewritten'];
-    let data = getSuiteData(benchmarkData, suiteNames);
-
-    if(data.length >= 11) {
-        chartForSuite(benchmarkData, suiteNames);
-    } else {
-        createFailureMessage(`
-<p>Unable to load Suite 'Partially Rewritten': ${data.length} of 11 Measurements available</p>
-`);
-    }
-}
-
-function PARTIALLY_WRAPPED(benchmarkData) {
-    const suiteNames = ['Partially Wrapped'];
-    let data = getSuiteData(benchmarkData, suiteNames);
-
-    if(data.length >= 11) {
-        chartForSuite(benchmarkData, suiteNames);
-    } else {
-        createFailureMessage(`
-<p>Unable to load Suite 'Partially Wrapped': ${data.length} of 11 Measurements available</p>
-`);
-    }
-}
-
-function withIgnoreErrors(cb) {
-    try {
-        cb();
-    } catch (e) {
-        console.error(e);
-    }
-}
-
-function doChartsFromJson(json) {
-	resetParent();
-
-    var benchmarkData = preprocessJson(json);
-
-    resetAndBuildInfo(benchmarkData);
-
-	withIgnoreErrors(() => {
-		AEXPR_CONSTRUCTION_CHART(benchmarkData);
-	});
-	withIgnoreErrors(() => {
-		AEXPR_UPDATE_CHART(benchmarkData);
-	});
-	withIgnoreErrors(() => {
-		REWRITING_IMPACT(benchmarkData);
-	});
-	withIgnoreErrors(() => {
-		INTERPRETATION_VS_REWRITING(benchmarkData);
-	});
-    withIgnoreErrors(() => {
-        PARTIALLY_REWRITTEN(benchmarkData);
-    });
-    withIgnoreErrors(() => {
-        PARTIALLY_WRAPPED(benchmarkData);
-    });
-}
-
-/*
- * HISTORY
- */
-function createHistory(label = 'unknown history') {
-	let history = document.createElement('div');
-	history.innerHTML = label;
-	document.body.insertBefore(history, document.getElementById('info'));
-	history.classList.add('history');
-	history.classList.add('clearfix');
-
-	return history;
-}
-
-function createHistoryBox(tooltip = 'bench', parent) {
-	let historyBox = document.createElement('div');
-	historyBox.classList.add('tooltip');
-	historyBox.setAttribute("data-tooltip", tooltip);
-	parent.insertBefore(historyBox, parent.firstChild);
-
-	return historyBox;
-}
-
-function initializeHistoryBox(historyBox) {
-    return (error, json) => {
-        // update the square visually to reflect the fact that it is ready
-        if(!error) {
-            historyBox.classList.add('loaded');
-            historyBox.onclick = () => doChartsFromJson(json);
-        } else {
-            historyBox.classList.add('failed');
-        }
-    };
-}
-
-//d3.json("benchmarks/latest.json", doChartsFromJson);
-//d3.json('benchmarks/paper_aeabbbfrm/overview.json', doChartsFromJson);
-
-// Benchmarks for paper: Active Expressions as basic Building Block for Reactive Mechanisms
-function paperBenchmark(label, directory) {
-	let history = createHistory(label);
-	function historyBoxFor(fileName) {
-		let filePath = `benchmarks/paper_aeabbbfrm/${directory}/${fileName}`;
-		let historyBox = createHistoryBox(fileName, history);
-
-		d3.json(filePath, initializeHistoryBox(historyBox));
-	}
-
-	for(let i = 1; i <= 100; i++) {
-		historyBoxFor(`run${i}.json`);
-	}
-	historyBoxFor('result.json');
-}
-
-function paperOverviewBenchmark() {
-	let history = createHistory('Paper Benchmark (Overview)');
-	let filePath = `benchmarks/paper_aeabbbfrm/overview.json`;
-	let historyBox = createHistoryBox('overview.json', history);
-
-	d3.json(filePath, initializeHistoryBox(historyBox));
-}
-paperOverviewBenchmark();
-
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
@@ -868,7 +608,7 @@ function createChart(jsons, config = jsons[0].config) {
 
 		return data;
 	})
-debugger
+
 	resetParent();
 
 	const margin = Object.assign({}, defaultMargin, {top: 10}),
@@ -888,18 +628,18 @@ debugger
 }
 
 function newJSON(jsons) {
-	uiForConfig(jsons[0]);
+	uiForConfig(jsons);
 	createChart(jsons);
 }
 
-(async function init(paths) {
-	const jsons = await Promise.all(paths.map(path => new Promise((resolve, reject) => d3.json(path, resolve))));
+(async function example(paths) {
+	const jsons = await Promise.all(paths.map(path => new Promise(resolve => d3.json(path, resolve))));
 	newJSON(jsons);
 })([
-	'../active-expressions-benchmark/results/2020-06-26_11-21-30/aexpr-construction.different-object.interpretation.json',
-	'../active-expressions-benchmark/results/2020-06-26_11-21-30/aexpr-construction.different-object.proxies.json',
-	'../active-expressions-benchmark/results/2020-06-26_11-21-30/aexpr-construction.different-object.rewriting.json',
-	'../active-expressions-benchmark/results/2020-06-26_11-21-30/aexpr-construction.different-object.ticking.json',
+	'./benchmarks/example/aexpr-construction.different-object.interpretation.json',
+	'./benchmarks/example/aexpr-construction.different-object.proxies.json',
+	'./benchmarks/example/aexpr-construction.different-object.rewriting.json',
+	'./benchmarks/example/aexpr-construction.different-object.ticking.json',
 ]);
 
 // d3.json('../active-expressions-benchmark/results/2020-063-26_11-38-40/aexpr-and-callback-count.rewriting.json', newJSON);
@@ -910,12 +650,14 @@ function onGenerate() {
 
 document.querySelector('#generate').addEventListener('click', () => onGenerate());
 
-function uiForConfig(json) {
+function uiForConfig(jsons) {
+	const json = jsons[0];
+
 	const config = document.querySelector('#config');
 	config.innerHTML = '';
 
 	onGenerate = () => {
-		createChart([json], getConfig());
+		createChart(jsons, getConfig());
 	};
 
 	const list = document.createElement('dl');
