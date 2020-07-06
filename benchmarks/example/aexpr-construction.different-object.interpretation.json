@@ -1,0 +1,36 @@
+{
+	"file": "/mnt/c/Users/Stefan/WebstormProjects/active-expressions-benchmark/build/aexpr-construction/different-object/interpretation.js",
+	"name": "aexpr-construction.different-object.interpretation",
+	"tags": [
+		"aexpr-construction",
+		"different-object",
+		"interpretation"
+	],
+	"config": {
+		"numAExpr": [
+			1000
+		]
+	},
+	"variations": [
+		{
+			"failed": false,
+			"error": null,
+			"parameters": {
+				"numAExpr": 1000
+			},
+			"executions": [
+				{
+					"execution": 1,
+					"startDate": "2020-06-26T09:22:01.635Z",
+					"iterations": [
+						{
+							"iteration": 1,
+							"startDate": "2020-06-26T09:22:01.705Z",
+							"elapsed": 453156200
+						}
+					]
+				}
+			]
+		}
+	]
+}

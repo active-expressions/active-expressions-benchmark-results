@@ -1,0 +1,36 @@
+{
+	"file": "/mnt/c/Users/Stefan/WebstormProjects/active-expressions-benchmark/build/aexpr-construction/different-object/rewriting.js",
+	"name": "aexpr-construction.different-object.rewriting",
+	"tags": [
+		"aexpr-construction",
+		"different-object",
+		"rewriting"
+	],
+	"config": {
+		"numAExpr": [
+			1000
+		]
+	},
+	"variations": [
+		{
+			"failed": false,
+			"error": null,
+			"parameters": {
+				"numAExpr": 1000
+			},
+			"executions": [
+				{
+					"execution": 1,
+					"startDate": "2020-06-26T09:22:02.265Z",
+					"iterations": [
+						{
+							"iteration": 1,
+							"startDate": "2020-06-26T09:22:02.330Z",
+							"elapsed": 15056900
+						}
+					]
+				}
+			]
+		}
+	]
+}

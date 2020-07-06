@@ -1,0 +1,30 @@
+{
+	"file": "/mnt/c/Users/Stefan/WebstormProjects/active-expressions-benchmark/build/aexpr-construction/different-object/proxies.js",
+	"name": "aexpr-construction.different-object.proxies",
+	"tags": [
+		"aexpr-construction",
+		"different-object",
+		"proxies"
+	],
+	"config": {
+		"numAExpr": [
+			1000
+		]
+	},
+	"variations": [
+		{
+			"failed": true,
+			"error": null,
+			"parameters": {
+				"numAExpr": 1000
+			},
+			"executions": [
+				{
+					"execution": 1,
+					"startDate": "2020-06-26T09:22:02.187Z",
+					"iterations": []
+				}
+			]
+		}
+	]
+}
