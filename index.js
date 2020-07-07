@@ -590,24 +590,22 @@ async function onDrop(evt, url) {
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-function createChart(jsons, config = jsons[0].config) {
+function createChart(jsons, config = jsons.map(json => json.config)) {
 	const data2 = jsons.flatMap((json, id) => {
+		const conf = config[id];
 		const name = json.name;
 		const variations = json.variations;
-		const data = variations
+
+		return variations
 			.filter(variation => {
-				return Object.entries(variation.parameters).every(([key, value]) => config[key] && config[key].includes(value))
+				return Object.entries(variation.parameters).every(([key, value]) => conf[key] && conf[key].includes(value))
 			})
 			.map(variation => {
-				const params = Object.entries(variation.parameters).reduce(((acc, [key, value]) => `${acc}, ${key}:${value}`))
-				const values = variation.executions.flatMap(e => {
-					return e.iterations.map(i => i.elapsed);
-				});
-				return [name + '\n' + params, values];
+				const params = Object.entries(variation.parameters).map((([key, value]) => `${key}:${value}`)).join(', ')
+				const values = variation.executions.flatMap(e => e.iterations.map(i => i.elapsed));
+				return [`${name} (${params})`, values];
 			});
-
-		return data;
-	})
+	});
 
 	resetParent();
 
@@ -627,26 +625,24 @@ function createChart(jsons, config = jsons[0].config) {
 	});
 }
 
+function serializeJSONs(jsons) {
+	saveJSON('benchmarks', jsons);
+}
+
 function newJSON(jsons) {
+	serializeJSONs(jsons);
 	uiForConfig(jsons);
 	createChart(jsons);
 }
-
-(async function example(paths) {
-	const jsons = await Promise.all(paths.map(path => new Promise(resolve => d3.json(path, resolve))));
-	newJSON(jsons);
-})([
-	'./benchmarks/example/aexpr-construction.different-object.interpretation.json',
-	'./benchmarks/example/aexpr-construction.different-object.proxies.json',
-	'./benchmarks/example/aexpr-construction.different-object.rewriting.json',
-	'./benchmarks/example/aexpr-construction.different-object.ticking.json',
-]);
 
 function onGenerate() {
 	alert('no data to display yet.');
 }
 
 document.querySelector('#generate').addEventListener('click', () => onGenerate());
+document.querySelector('#clearLocalStorage').addEventListener('click', function clearStorage() {
+	localStorage.removeItem('benchmarks');
+});
 
 function buildUIForBenchConfig(json, config) {
 	const list = document.createElement('dl');
@@ -686,28 +682,24 @@ function buildUIForBenchConfig(json, config) {
 	config.append(div);
 }
 
+const configContainer = document.querySelector('#config');
+
 function uiForConfig(jsons) {
-	const json = jsons[0];
+	configContainer.innerHTML = '';
 
-	const container = document.querySelector('#config');
-	container.innerHTML = '';
-
-	onGenerate = () => {
-		createChart(jsons, getConfig());
-	};
+	onGenerate = () => createChart(jsons, getConfig());
 
 	jsons.forEach(json => {
 		const parent = document.createElement('div');
-		container.append(parent);
+		parent.classList.add('benchConfig');
+		configContainer.append(parent);
 		buildUIForBenchConfig(json, parent);
-	})
+	});
 }
 
-function getConfig() {
-	const config = document.querySelector('#config');
-
-	const keys = Array.from(config.querySelectorAll('dl dt')).map(e => e.innerHTML);
-	const labels = Array.from(config.querySelectorAll('dl dd')).map(dd => {
+function getBenchConfig(parent) {
+	const keys = Array.from(parent.querySelectorAll('dl dt')).map(e => e.innerHTML);
+	const labels = Array.from(parent.querySelectorAll('dl dd')).map(dd => {
 		return Array.from(dd.querySelectorAll('li'))
 			.filter(li => li.querySelector('input').checked)
 			.map(li => JSON.parse(li.querySelector('label').innerHTML));
@@ -715,3 +707,38 @@ function getConfig() {
 
 	return _.fromPairs(_.zip(keys, labels));
 }
+
+function getConfig() {
+	return Array.from(configContainer.querySelectorAll('.benchConfig')).map(parent => {
+		return getBenchConfig(parent);
+	});
+}
+
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+
+import './lang.js';
+import { loadJSON, saveJSON } from './storage.js';
+
+async function example() {
+	const paths = [
+		'./benchmarks/example/aexpr-construction.different-object.interpretation.json',
+		'./benchmarks/example/aexpr-construction.different-object.proxies.json',
+		'./benchmarks/example/aexpr-construction.different-object.rewriting.json',
+		'./benchmarks/example/aexpr-construction.different-object.ticking.json',
+	]
+	const jsons = await Promise.all(paths.map(path => new Promise(resolve => d3.json(path, resolve))));
+	newJSON(jsons);
+}
+
+;(function initialize() {
+	const jsons = loadJSON('benchmarks');
+	if (jsons) {
+		newJSON(jsons);
+	} else {
+		example();
+	}
+})();
