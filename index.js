@@ -590,15 +590,21 @@ async function onDrop(evt, url) {
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-function createChart(jsons, config = jsons.map(json => json.config)) {
-	const data2 = jsons.flatMap((json, id) => {
-		const conf = config[id];
-		const name = json.name;
+function createChart(jsons, configs) {
+
+	resetParent();
+
+	const data = jsons.flatMap((json, id) => {
+		const conf = configs[id].variationsToDisplay;
+		const name = configs[id].name;
 		const variations = json.variations;
 
 		return variations
 			.filter(variation => {
-				return Object.entries(variation.parameters).every(([key, value]) => conf[key] && conf[key].includes(value))
+				return Object.entries(variation.parameters).every(([key, value]) => {
+					const c = conf[key]
+					return c && c.find(([v, shouldInclude]) => v === value && shouldInclude);
+				})
 			})
 			.map(variation => {
 				const params = Object.entries(variation.parameters).map((([key, value]) => `${key}:${value}`)).join(', ')
@@ -607,12 +613,11 @@ function createChart(jsons, config = jsons.map(json => json.config)) {
 			});
 	});
 
-	resetParent();
-
 	const margin = Object.assign({}, defaultMargin, {top: 10}),
 		width = 800 - margin.left - margin.right,
 		height = 400 - margin.top - margin.bottom;
-	boxPlot(data2, {
+
+	boxPlot(data, {
 		id: createChartParentAndReturnId(),
 		title: 'TITLE',
 		benchName: 'BENCHNAME',
@@ -625,14 +630,23 @@ function createChart(jsons, config = jsons.map(json => json.config)) {
 	});
 }
 
-function serializeJSONs(jsons) {
+function serializeJSONs(jsons, configs) {
 	saveJSON('benchmarks', jsons);
+	saveJSON('benchmarkConfigurations', configs);
+}
+
+function displayBenchsWithConfigs(jsons, configs) {
+	uiForConfig(configs);
+	createChart(jsons, configs);
+
+	serializeJSONs(jsons, configs);
+
+	onGenerate = () => displayBenchsWithConfigs(jsons, getConfig());
 }
 
 function newJSON(jsons) {
-	serializeJSONs(jsons);
-	uiForConfig(jsons);
-	createChart(jsons);
+	const configs = jsons.map(json => BenchConfig.fromBench(json));
+	displayBenchsWithConfigs(jsons, configs);
 }
 
 function onGenerate() {
@@ -642,12 +656,14 @@ function onGenerate() {
 document.querySelector('#generate').addEventListener('click', () => onGenerate());
 document.querySelector('#clearLocalStorage').addEventListener('click', function clearStorage() {
 	localStorage.removeItem('benchmarks');
+	localStorage.removeItem('benchmarkConfigurations');
 });
 
-function buildUIForBenchConfig(json, config) {
+function buildUIForBenchConfig(config, parentElement) {
+	const variationsToDisplay = config.variationsToDisplay;
 	const list = document.createElement('dl');
-
-	const d = Object.entries(json.config)
+	debugger
+	const d = Object.entries(variationsToDisplay)
 		.flatMap(([key, values]) => {
 			const dt = document.createElement('dt');
 			dt.innerHTML = key;
@@ -656,13 +672,13 @@ function buildUIForBenchConfig(json, config) {
 			const ul = document.createElement('ul');
 			dd.append(ul);
 
-			ul.append(...values.map(value => {
+			ul.append(...values.map(([value, shouldInclude]) => {
 				const li = document.createElement('li');
 				const checkBox = document.createElement('input');
 				checkBox.type = 'checkbox';
 				const id = 'id-' + uuid();
 				checkBox.id = id;
-				checkBox.checked = true;
+				checkBox.checked = shouldInclude;
 				const label = document.createElement('label');
 				label.setAttribute('for', id);
 				label.innerHTML = JSON.stringify(value);
@@ -676,41 +692,75 @@ function buildUIForBenchConfig(json, config) {
 	list.append(...d);
 	const div = document.createElement('div');
 	const name = document.createElement('span');
+	name.classList.add('name');
 	name.style.fontWeight = 'bold';
-	name.innerHTML = json.name;
+	name.innerHTML = config.name;
 	div.append(name, list);
-	config.append(div);
+	parentElement.append(div);
 }
 
 const configContainer = document.querySelector('#config');
 
-function uiForConfig(jsons) {
+class VisConfig {}
+
+function copyJSON(json) {
+	return JSON.parse(JSON.stringify(json));
+}
+
+class BenchConfig {
+
+	static fromBench(json) {
+		const config = copyJSON(json.config);
+
+		for (let values of Object.values(config)) {
+			values.forEach((value, id) => {
+				values[id] = [value, true];
+			});
+		}
+
+		return {
+			name: json.name,
+			variationsToDisplay: config
+		}
+	}
+
+	static fromElement(parent) {
+		const keys = Array.from(parent.querySelectorAll('dl dt')).map(e => e.innerHTML);
+
+		const labels = Array.from(parent.querySelectorAll('dl dd')).map(dd => {
+			return Array.from(dd.querySelectorAll('li'))
+				.map(li => [
+					JSON.parse(li.querySelector('label').innerHTML),
+					!!li.querySelector('input').checked
+				]);
+		});
+
+		return {
+			name: parent.querySelector('span.name').innerHTML,
+			variationsToDisplay: _.fromPairs(_.zip(keys, labels))
+		}
+	}
+
+}
+
+class Bench {}
+
+function uiForConfig(configs) {
+
 	configContainer.innerHTML = '';
 
-	onGenerate = () => createChart(jsons, getConfig());
-
-	jsons.forEach(json => {
+	configs.forEach(config => {
 		const parent = document.createElement('div');
 		parent.classList.add('benchConfig');
 		configContainer.append(parent);
-		buildUIForBenchConfig(json, parent);
-	});
-}
-
-function getBenchConfig(parent) {
-	const keys = Array.from(parent.querySelectorAll('dl dt')).map(e => e.innerHTML);
-	const labels = Array.from(parent.querySelectorAll('dl dd')).map(dd => {
-		return Array.from(dd.querySelectorAll('li'))
-			.filter(li => li.querySelector('input').checked)
-			.map(li => JSON.parse(li.querySelector('label').innerHTML));
+		buildUIForBenchConfig(config, parent);
 	});
 
-	return _.fromPairs(_.zip(keys, labels));
 }
 
 function getConfig() {
 	return Array.from(configContainer.querySelectorAll('.benchConfig')).map(parent => {
-		return getBenchConfig(parent);
+		return BenchConfig.fromElement(parent);
 	});
 }
 
@@ -736,8 +786,10 @@ async function example() {
 
 ;(function initialize() {
 	const jsons = loadJSON('benchmarks');
-	if (jsons) {
-		newJSON(jsons);
+	const configs = loadJSON('benchmarkConfigurations');
+	if (jsons && configs) {
+		debugger
+		displayBenchsWithConfigs(jsons, configs);
 	} else {
 		example();
 	}
