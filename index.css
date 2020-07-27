@@ -25,6 +25,10 @@ input.variable-length {
     /* outline: black dashed 1px; */
 }
 
+input.bold {
+    font-weight: bold;
+}
+
 body {
     margin: 0;
     padding: 0;

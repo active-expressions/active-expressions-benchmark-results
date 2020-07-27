@@ -1,3 +1,4 @@
+
 function extend(obj, definitions) {
     const descriptors = Object.getOwnPropertyDescriptors(definitions);
     for (let [propName, descriptor] of Object.entries(descriptors)) {

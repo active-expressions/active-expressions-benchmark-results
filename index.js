@@ -1,5 +1,5 @@
 import './lodash.js';
-import { uuid } from './utils.js';
+import { uuid, create } from './utils.js';
 
 var labels = true; // show the text labels beside individual boxplots?
 
@@ -12,7 +12,7 @@ const CONTAINER = document.getElementById('container');
 // show labels checkbox
 const showLabelsId = 'showLabels';
 (() => {
-	let container = document.createElement('div');
+	let container = create('div');
 	container.innerHTML = `<label> <input id="${showLabelsId}" type="checkbox" name="zutat" value="salami" checked> Show Labels </label><br /><br />`;
 
 	const info = document.getElementById('info');
@@ -235,7 +235,7 @@ function guidGenerator() {
 
 function createChartParentAndReturnId() {
 	let id = 'chart' + guidGenerator();
-	var parent = document.createElement('div');
+	var parent = create('div');
 	parent.id = id;
 	document.querySelector('#charts').appendChild(parent);
 
@@ -688,25 +688,23 @@ document.querySelector('#clearLocalStorage').addEventListener('click', function 
 
 function buildUIForBenchConfig(config, parentElement) {
 	const variationsToDisplay = config.variationsToDisplay;
-	const list = document.createElement('dl');
-	debugger
-	const d = Object.entries(variationsToDisplay)
-		.flatMap(([key, values]) => {
-			const dt = document.createElement('dt');
-			dt.innerHTML = key;
+	const list = create('dl');
 
-			const dd = document.createElement('dd');
-			const ul = document.createElement('ul');
+	const keyValueLists = Object.entries(variationsToDisplay)
+		.flatMap(([key, values]) => {
+			const dt = create('dt', { innerHTML: key });
+			const dd = create('dd');
+			const ul = create('ul');
 			dd.append(ul);
 
 			ul.append(...values.map(([value, shouldInclude]) => {
-				const li = document.createElement('li');
-				const checkBox = document.createElement('input');
+				const li = create('li');
+				const checkBox = create('input');
 				checkBox.type = 'checkbox';
 				const id = 'id-' + uuid();
 				checkBox.id = id;
 				checkBox.checked = shouldInclude;
-				const label = document.createElement('label');
+				const label = create('label');
 				label.setAttribute('for', id);
 				label.innerHTML = JSON.stringify(value);
 				li.append(checkBox, label);
@@ -716,14 +714,14 @@ function buildUIForBenchConfig(config, parentElement) {
 			return [dt, dd];
 		});
 
-	list.append(...d);
-	const div = document.createElement('div');
-	const name = document.createElement('input');
-	name.type = 'text';
-	name.placeholder = "name";
-	name.classList.add('name', 'variable-length');
-	name.style.fontWeight = 'bold';
-	name.value = config.name;
+	list.append(...keyValueLists);
+	const div = create('div');
+	const name = create('input', {
+		type: 'text',
+		placeholder: "name",
+		class: 'name variable-length bold',
+		value: config.name,
+	});
 	enableAutoResize(name);
 	div.append(name, list);
 	parentElement.append(div);
@@ -731,7 +729,9 @@ function buildUIForBenchConfig(config, parentElement) {
 
 const configContainer = document.querySelector('#config');
 
-class VisConfig {}
+class VisConfig {
+
+}
 
 function copyJSON(json) {
 	return JSON.parse(JSON.stringify(json));
@@ -780,7 +780,7 @@ function uiForConfig(configs) {
 	configContainer.innerHTML = '';
 
 	configs.forEach(config => {
-		const parent = document.createElement('div');
+		const parent = create('div');
 		parent.classList.add('benchConfig');
 		configContainer.append(parent);
 		buildUIForBenchConfig(config, parent);

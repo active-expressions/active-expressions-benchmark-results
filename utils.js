@@ -5,3 +5,13 @@ export function uuid() {
     return v.toString(16);
   });
 }
+
+export function create(tagName, attributes = {}, children = []) {
+  const element = document.createElement(tagName);
+  Object.assign(element, attributes);
+  if (attributes.class) {
+    element.classList.add(...attributes.class.split(' '));
+  }
+  element.append(...children);
+  return element;
+}
