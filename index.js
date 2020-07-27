@@ -7,12 +7,16 @@ const TICKING_NAME = 'Convention',
 	INTERPRETATION_NAME = 'Interpretation',
 	REWRITING_NAME = 'Compilation';
 
+const CONTAINER = document.getElementById('container');
+
 // show labels checkbox
 const showLabelsId = 'showLabels';
 (() => {
 	let container = document.createElement('div');
 	container.innerHTML = `<label> <input id="${showLabelsId}" type="checkbox" name="zutat" value="salami" checked> Show Labels </label><br /><br />`;
-	document.body.insertBefore(container, document.getElementById('info'));
+
+	const info = document.getElementById('info');
+	info.parentElement.insertBefore(container, info);
 })();
 
 var defaultMargin = {top: 30, right: 10, bottom: 100, left: 60};
@@ -527,6 +531,28 @@ function createFailureMessage(message) {
     medianParent.classList.add('failedSuite');
     medianParent.innerHTML = message;
 }
+
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+
+function enableAutoResize(input) {
+	function updateSize() {
+		requestAnimationFrame(() => {
+			input.size = (input.value.length || input.placeholder.length || 1);
+		});
+	}
+
+	for (let eventName of ['keyup', 'keypress', 'focus', 'blur', 'change']) {
+		input.addEventListener(eventName, updateSize, false);
+		input.classList.add('variable-length');
+	}
+
+	updateSize();
+}
+
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
@@ -536,8 +562,8 @@ function createFailureMessage(message) {
 const dropArea = document.querySelector('#drop-area');
 dropArea.addEventListener('dragenter', evt => dropArea.classList.add("drag"), false);
 dropArea.addEventListener('dragleave', evt => dropArea.classList.remove("drag"), false);
-dropArea.addEventListener("drop", evt => onDrop(evt))
-dropArea.addEventListener("dragover", evt => onDragOver(evt))
+dropArea.addEventListener("drop", evt => onDrop(evt));
+dropArea.addEventListener("dragover", evt => onDragOver(evt));
 
 function onDragOver(evt) {
 	const mode = evt.shiftKey ? "move" : "copy";
@@ -595,14 +621,15 @@ function createChart(jsons, configs) {
 	resetParent();
 
 	const data = jsons.flatMap((json, id) => {
-		const conf = configs[id].variationsToDisplay;
-		const name = configs[id].name;
+		const config = configs[id];
+		const variationsToDisplay = config.variationsToDisplay;
+		const name = config.name;
 		const variations = json.variations;
 
 		return variations
 			.filter(variation => {
 				return Object.entries(variation.parameters).every(([key, value]) => {
-					const c = conf[key]
+					const c = variationsToDisplay[key]
 					return c && c.find(([v, shouldInclude]) => v === value && shouldInclude);
 				})
 			})
@@ -691,10 +718,13 @@ function buildUIForBenchConfig(config, parentElement) {
 
 	list.append(...d);
 	const div = document.createElement('div');
-	const name = document.createElement('span');
-	name.classList.add('name');
+	const name = document.createElement('input');
+	name.type = 'text';
+	name.placeholder = "name";
+	name.classList.add('name', 'variable-length');
 	name.style.fontWeight = 'bold';
-	name.innerHTML = config.name;
+	name.value = config.name;
+	enableAutoResize(name);
 	div.append(name, list);
 	parentElement.append(div);
 }
@@ -736,7 +766,7 @@ class BenchConfig {
 		});
 
 		return {
-			name: parent.querySelector('span.name').innerHTML,
+			name: parent.querySelector('input.name').value,
 			variationsToDisplay: _.fromPairs(_.zip(keys, labels))
 		}
 	}
@@ -788,7 +818,6 @@ async function example() {
 	const jsons = loadJSON('benchmarks');
 	const configs = loadJSON('benchmarkConfigurations');
 	if (jsons && configs) {
-		debugger
 		displayBenchsWithConfigs(jsons, configs);
 	} else {
 		example();

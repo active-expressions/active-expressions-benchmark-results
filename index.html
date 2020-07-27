@@ -3,6 +3,7 @@
 <!--<meta http-equiv="refresh" content="3" >-->
 <title>Active Expressions Runtime Benchmarks</title>
 
+<link rel="stylesheet" type="text/css" media="screen" href="index.css">
 <link rel="stylesheet" type="text/css" media="screen" href="bowplot.css">
 <link rel="stylesheet" type="text/css" media="screen" href="history.css">
 <link rel="stylesheet" type="text/css" media="screen" href="tooltip.css">
@@ -11,28 +12,34 @@
 <link rel="stylesheet" type="text/css" media="screen" href="drop-aera.css">
 <body>
 
-<h1>Active Expressions Runtime Benchmarks</h1>
+<div id="container">
+    <header class="panel">
+        <div id="drop-area">
+            <span class="no-drag">Drop Area</span>
+            <span class="on-drag">Drop Here</span>
+        </div>
 
-<div id="drop-area">
-    <span class="no-drag">Drop Area</span>
-    <span class="on-drag">Drop Here</span>
+        <a class="svg-crowbar" href="javascript:javascript: (function () { var e = document.createElement('script'); e.setAttribute('src', 'https://nytimes.github.io/svg-crowbar/svg-crowbar.js'); e.setAttribute('class', 'svg-crowbar'); document.body.appendChild(e); })();">Export Charts</a>&nbsp;
+
+        <div id="info"></div>
+    </header>
+
+    <div id="buttons" class="panel">
+        <button id="generate">Generate</button>
+        <button id="clearLocalStorage">Clear Local Storage</button>
+    </div>
+
+    <div id="bench" class="panel">
+        <div id="config"></div>
+    </div>
+
+    <div id="charts" class="panel">
+        <div id="chart"></div>
+    </div>
 </div>
-
-<a class="svg-crowbar" href="javascript:javascript: (function () { var e = document.createElement('script'); e.setAttribute('src', 'https://nytimes.github.io/svg-crowbar/svg-crowbar.js'); e.setAttribute('class', 'svg-crowbar'); document.body.appendChild(e); })();">Export Charts</a>&nbsp;
-
-<div id="info"></div>
-
-<div id="charts">
-    <div id="chart"></div>
-</div>
-
-<div id="bench">
-    <div id="config"></div>
-</div>
-<button id="generate">Generate</button>
-<button id="clearLocalStorage">Clear Local Storage</button>
 
 <script src="d3.v3.js"></script>
 <script src="box.js"></script>
 <script src="index.js" type="module"></script>
+<div></div>
 </body>
