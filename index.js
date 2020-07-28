@@ -1,7 +1,7 @@
 import './lodash.js';
-import {create, uuid} from './utils.js';
+import { create, uuid, enableAutoResize } from './utils.js';
 import './lang.js';
-import {loadJSON, saveJSON} from './storage.js';
+import { loadJSON, saveJSON } from './storage.js';
 
 var labels = true; // show the text labels beside individual boxplots?
 
@@ -540,27 +540,6 @@ function createFailureMessage(message) {
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-function enableAutoResize(input) {
-	function updateSize() {
-		requestAnimationFrame(() => {
-			input.size = (input.value.length || input.placeholder.length || 1);
-		});
-	}
-
-	for (let eventName of ['keyup', 'keypress', 'focus', 'blur', 'change']) {
-		input.addEventListener(eventName, updateSize, false);
-		input.classList.add('variable-length');
-	}
-
-	updateSize();
-}
-
-// ------------------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------------------
-
 const dropArea = document.querySelector('#drop-area');
 dropArea.addEventListener('dragenter', evt => dropArea.classList.add("drag"), false);
 dropArea.addEventListener('dragleave', evt => dropArea.classList.remove("drag"), false);
@@ -618,76 +597,31 @@ async function onDrop(evt, url) {
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-function createChart(jsons, configs) {
-
-	resetParent();
-
-	const data = jsons.flatMap((json, id) => {
-		const config = configs[id];
-		const variationsToDisplay = config.variationsToDisplay;
-		const name = config.name;
-		const variations = json.variations;
-
-		return variations
-			.filter(variation => {
-				return Object.entries(variation.parameters).every(([key, value]) => {
-					const c = variationsToDisplay[key]
-					return c && c.find(([v, shouldInclude]) => v === value && shouldInclude);
-				})
-			})
-			.map(variation => {
-				const params = Object.entries(variation.parameters).map((([key, value]) => `${key}:${value}`)).join(', ')
-				const values = variation.executions.flatMap(e => e.iterations.map(i => i.elapsed));
-				return [`${name} (${params})`, values];
-			});
-	});
-
-	const margin = Object.assign({}, defaultMargin, {top: 10}),
-		width = 800 - margin.left - margin.right,
-		height = 400 - margin.top - margin.bottom;
-
-	boxPlot(data, {
-		id: createChartParentAndReturnId(),
-		title: 'TITLE',
-		benchName: 'BENCHNAME',
-		// min: 0,//tickingAndRewritingMin,
-		// max: 10,//tickingAndRewritingMax,
-		margin,
-		width,
-		height,
-		// numberOfElementsPerChunk: 2
-	});
-}
-
-function serializeJSONs(jsons, configs) {
-	saveJSON('visConfig', [jsons, configs]);
-}
-
 const configContainer = document.querySelector('#config');
 
 function displayBenchsWithConfigs(jsons, configs) {
-	const visConfig = VisConfig.fromJSONsAndConfigs(jsons, configs);
-	visConfig.buildUI();
-	createChart(jsons, configs);
-
-	serializeJSONs(jsons, configs);
-
-	onGenerate = () => {
-		const newJSONs = configContainer.getJSONAttribute('benchmarks');
-		displayBenchsWithConfigs(newJSONs, getConfig());
-	};
+	return VisConfig.fromJSONsAndConfigs(jsons, configs);
 }
 
 function newJSON(jsons) {
-	const configs = jsons.map(json => BenchmarkConfig.fromBench(json));
-	displayBenchsWithConfigs(jsons, configs);
+	const configs = jsons.map(json => BenchmarkConfig.fromBenchmarkFile(json));
+	const visConfig = displayBenchsWithConfigs(jsons, configs);
+	visConfig.display();
 }
 
-function onGenerate() {
-	alert('no data to display yet.');
-}
+const BENCHMARKS_STORE_ATTRIBUTE = 'benchmarks';
 
-document.querySelector('#generate').addEventListener('click', () => onGenerate());
+document.querySelector('#generate').addEventListener('click', function onGenerate() {
+	if (!configContainer.hasAttribute(BENCHMARKS_STORE_ATTRIBUTE)) {
+		alert('no data to display yet.');
+		return;
+	}
+
+	const newJSONs = configContainer.getJSONAttribute(BENCHMARKS_STORE_ATTRIBUTE);
+	const visConfig = displayBenchsWithConfigs(newJSONs, getConfig());
+	visConfig.display();
+});
+
 document.querySelector('#clearLocalStorage').addEventListener('click', function clearStorage() {
 	localStorage.removeItem('visConfig');
 });
@@ -698,8 +632,8 @@ class VisConfig {
 		return new VisConfig({ jsons, configs });
 	}
 
-	toJSON(jsons, configs) {
-		(jsons, configs)
+	static fromUI() {
+
 	}
 
 	constructor({ jsons, configs }) {
@@ -707,16 +641,65 @@ class VisConfig {
 		this.configs = configs;
 	}
 
+	display() {
+		this.buildUI();
+		this.createChart();
+		this.saveLocalAs('visConfig');
+	}
+
 	buildUI() {
 		configContainer.innerHTML = '';
 
-		configContainer.setJSONAttribute('benchmarks', this.jsons);
+		configContainer.setJSONAttribute(BENCHMARKS_STORE_ATTRIBUTE, this.jsons);
 
 		this.configs.forEach(config => {
 			configContainer.append(config.buildUI());
 		});
 	}
 
+	createChart() {
+		resetParent();
+
+		const data = this.jsons.flatMap((json, id) => {
+			const config = (this.configs)[id];
+			const variationsToDisplay = config.variationsToDisplay;
+			const name = config.name;
+			const variations = json.variations;
+
+			return variations
+				.filter(variation => {
+					return Object.entries(variation.parameters).every(([key, value]) => {
+						const c = variationsToDisplay[key]
+						return c && c.find(([v, shouldInclude]) => v === value && shouldInclude);
+					})
+				})
+				.map(variation => {
+					const params = Object.entries(variation.parameters).map((([key, value]) => `${key}:${value}`)).join(', ')
+					const values = variation.executions.flatMap(e => e.iterations.map(i => i.elapsed));
+					return [`${name} (${params})`, values];
+				});
+		});
+
+		const margin = Object.assign({}, defaultMargin, {top: 10}),
+			width = 800 - margin.left - margin.right,
+			height = 400 - margin.top - margin.bottom;
+
+		boxPlot(data, {
+			id: createChartParentAndReturnId(),
+			title: 'TITLE',
+			benchName: 'BENCHNAME',
+			// min: 0,//tickingAndRewritingMin,
+			// max: 10,//tickingAndRewritingMax,
+			margin,
+			width,
+			height,
+			// numberOfElementsPerChunk: 2
+		});
+	}
+
+	saveLocalAs(key) {
+		saveJSON(key, [this.jsons, this.configs]);
+	}
 }
 
 function copyJSON(json) {
@@ -725,7 +708,7 @@ function copyJSON(json) {
 
 class BenchmarkConfig {
 
-	static fromBench(json) {
+	static fromBenchmarkFile(json) {
 		const config = copyJSON(json.config);
 
 		for (let values of Object.values(config)) {
@@ -832,7 +815,8 @@ async function example() {
 ;(function initialize() {
 	const [jsons, configs] = loadJSON('visConfig') || [];
 	if (jsons && configs) {
-		displayBenchsWithConfigs(jsons, configs.map(config => BenchmarkConfig.fromJSON(config)));
+		const visConfig = displayBenchsWithConfigs(jsons, configs.map(config => BenchmarkConfig.fromJSON(config)));
+		visConfig.display();
 	} else {
 		example();
 	}

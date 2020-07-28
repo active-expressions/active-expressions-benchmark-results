@@ -15,3 +15,19 @@ export function create(tagName, attributes = {}, children = []) {
   element.append(...children);
   return element;
 }
+
+export function enableAutoResize(input) {
+  function updateSize() {
+    requestAnimationFrame(() => {
+      input.size = (input.value.length || input.placeholder.length || 1);
+    });
+  }
+
+  for (let eventName of ['keyup', 'keypress', 'focus', 'blur', 'change']) {
+    input.addEventListener(eventName, updateSize, false);
+    input.classList.add('variable-length');
+  }
+
+  updateSize();
+}
+
