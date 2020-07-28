@@ -3,23 +3,11 @@ import {create, enableAutoResize, uuid} from './utils.js';
 import './lang.js';
 import {loadJSON, removeItem, saveJSON} from './storage.js';
 
-var labels = true; // show the text labels beside individual boxplots?
-
 const TICKING_NAME = 'Convention',
 	INTERPRETATION_NAME = 'Interpretation',
 	REWRITING_NAME = 'Compilation';
 
 const CONTAINER = document.getElementById('container');
-
-// show labels checkbox
-const showLabelsId = 'showLabels';
-(() => {
-	let container = create('div');
-	container.innerHTML = `<label> <input id="${showLabelsId}" type="checkbox" name="zutat" value="salami" checked> Show Labels </label><br /><br />`;
-
-	const info = document.getElementById('info');
-	info.parentElement.insertBefore(container, info);
-})();
 
 var defaultMargin = {top: 30, right: 10, bottom: 100, left: 60};
 
@@ -37,14 +25,15 @@ function boxPlot(data, {
 	yAxisText = "Execution Time in ms",
 	numberOfElementsPerChunk = 0,
 	yTickCount = 4,
-	xAxisLabelOffset = 50
+	xAxisLabelOffset = 50,
+	showLabels = true, // show the text labels beside individual boxplots?
 }) {
 
 	var chart = d3.box()
 		.whiskers(iqr(1.5))
 		.height(height)
 		.domain([min, max])
-		.showLabels(document.getElementById(showLabelsId).checked);
+		.showLabels(showLabels);
 
 	var svg = d3.select('#' + id).append("svg")
 		.attr("width", width + margin.left + margin.right)
@@ -597,6 +586,7 @@ async function onDrop(evt, url) {
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
+const benchContainer = document.querySelector('#bench');
 const configContainer = document.querySelector('#config');
 
 async function displayFromFiles(jsons) {
@@ -605,6 +595,7 @@ async function displayFromFiles(jsons) {
 }
 
 const BENCHMARKS_STORE_ATTRIBUTE = 'benchmarks';
+const SHOW_LABELS_ID = 'showLabels';
 
 document.querySelector('#generate').addEventListener('click', async function onGenerate() {
 	const visConfig = VisConfig.fromUI();
@@ -623,10 +614,9 @@ document.querySelector('#clearLocalStorage').addEventListener('click', async fun
 class VisConfig {
 
 	static fromJSON(json) {
-		const [jsons, configJSONs] = json;
-		const configs = configJSONs.map(config => BenchmarkConfig.fromJSON(config));
+		json.configs = json.configs.map(config => BenchmarkConfig.fromJSON(config));
 
-		return new VisConfig({ jsons, configs });
+		return new VisConfig(json);
 	}
 
 	static fromBenchmarkFiles(jsons) {
@@ -640,16 +630,19 @@ class VisConfig {
 			return;
 		}
 
+		const showLabels = document.getElementById(SHOW_LABELS_ID).checked;
 		const jsons = configContainer.getJSONAttribute(BENCHMARKS_STORE_ATTRIBUTE);
 		const configs = Array.from(configContainer.querySelectorAll('.benchConfig'))
 			.map(parent => BenchmarkConfig.fromElement(parent));
 
-		return new VisConfig({ jsons, configs });
+		return new VisConfig({ jsons, configs, showLabels });
 	}
 
-	constructor({ jsons, configs }) {
-		this.jsons = jsons;
-		this.configs = configs;
+	constructor(params) {
+		const defaults = {
+			showLabels: true,
+		};
+		Object.assign(this, defaults, params);
 	}
 
 	async display() {
@@ -660,6 +653,12 @@ class VisConfig {
 
 	buildUI() {
 		configContainer.innerHTML = '';
+
+		// show labels checkbox
+		let container = create('div');
+		const checked = this.showLabels ? 'checked' : '';
+		container.innerHTML = `<label> <input id="${SHOW_LABELS_ID}" type="checkbox" ${checked}> Show Labels </label>`;
+		configContainer.append(container);
 
 		configContainer.setJSONAttribute(BENCHMARKS_STORE_ATTRIBUTE, this.jsons);
 
@@ -704,12 +703,13 @@ class VisConfig {
 			margin,
 			width,
 			height,
-			// numberOfElementsPerChunk: 2
+			// numberOfElementsPerChunk: 2,
+			showLabels: this.showLabels,
 		});
 	}
 
 	async saveLocalAs(key) {
-		await saveJSON(key, [this.jsons, this.configs]);
+		await saveJSON(key, this);
 	}
 }
 
