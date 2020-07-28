@@ -1,7 +1,7 @@
 import './lodash.js';
-import { create, uuid, enableAutoResize } from './utils.js';
+import {create, enableAutoResize, uuid} from './utils.js';
 import './lang.js';
-import { loadJSON, saveJSON, removeItem } from './storage.js';
+import {loadJSON, removeItem, saveJSON} from './storage.js';
 
 var labels = true; // show the text labels beside individual boxplots?
 
@@ -578,7 +578,7 @@ async function onDrop(evt, url) {
 			return JSON.parse(text);
 		});
 		const jsons = await Promise.all(textPromises);
-		await newJSON(jsons);
+		await displayFromFiles(jsons);
 	} else {
 		const data = evt.dataTransfer.getData("text");
 		if (data) {
@@ -599,27 +599,21 @@ async function onDrop(evt, url) {
 
 const configContainer = document.querySelector('#config');
 
-function displayBenchsWithConfigs(jsons, configs) {
-	return VisConfig.fromJSONsAndConfigs(jsons, configs);
-}
-
-async function newJSON(jsons) {
-	const configs = jsons.map(json => BenchmarkConfig.fromBenchmarkFile(json));
-	const visConfig = displayBenchsWithConfigs(jsons, configs);
+async function displayFromFiles(jsons) {
+	const visConfig = VisConfig.fromBenchmarkFiles(jsons);
 	await visConfig.display();
 }
 
 const BENCHMARKS_STORE_ATTRIBUTE = 'benchmarks';
 
 document.querySelector('#generate').addEventListener('click', async function onGenerate() {
-	if (!configContainer.hasAttribute(BENCHMARKS_STORE_ATTRIBUTE)) {
-		alert('no data to display yet.');
-		return;
-	}
+	const visConfig = VisConfig.fromUI();
 
-	const newJSONs = configContainer.getJSONAttribute(BENCHMARKS_STORE_ATTRIBUTE);
-	const visConfig = displayBenchsWithConfigs(newJSONs, getConfig());
-	await visConfig.display();
+	if (visConfig) {
+		await visConfig.display();
+	} else {
+		alert('no data to display yet.');
+	}
 });
 
 document.querySelector('#clearLocalStorage').addEventListener('click', async function clearStorage() {
@@ -628,12 +622,29 @@ document.querySelector('#clearLocalStorage').addEventListener('click', async fun
 
 class VisConfig {
 
-	static fromJSONsAndConfigs(jsons, configs) {
+	static fromJSON(json) {
+		const [jsons, configJSONs] = json;
+		const configs = configJSONs.map(config => BenchmarkConfig.fromJSON(config));
+
+		return new VisConfig({ jsons, configs });
+	}
+
+	static fromBenchmarkFiles(jsons) {
+		const configs = jsons.map(json => BenchmarkConfig.fromBenchmarkFile(json));
+
 		return new VisConfig({ jsons, configs });
 	}
 
 	static fromUI() {
+		if (!configContainer.hasAttribute(BENCHMARKS_STORE_ATTRIBUTE)) {
+			return;
+		}
 
+		const jsons = configContainer.getJSONAttribute(BENCHMARKS_STORE_ATTRIBUTE);
+		const configs = Array.from(configContainer.querySelectorAll('.benchConfig'))
+			.map(parent => BenchmarkConfig.fromElement(parent));
+
+		return new VisConfig({ jsons, configs });
 	}
 
 	constructor({ jsons, configs }) {
@@ -790,18 +801,13 @@ class BenchmarkConfig {
 
 class Benchmark {}
 
-function getConfig() {
-	return Array.from(configContainer.querySelectorAll('.benchConfig'))
-		.map(parent => BenchmarkConfig.fromElement(parent));
-}
-
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-async function example() {
+async function loadExample() {
 	const paths = [
 		'./benchmarks/example/aexpr-construction.different-object.interpretation.json',
 		'./benchmarks/example/aexpr-construction.different-object.proxies.json',
@@ -809,15 +815,15 @@ async function example() {
 		'./benchmarks/example/aexpr-construction.different-object.ticking.json',
 	]
 	const jsons = await Promise.all(paths.map(path => new Promise(resolve => d3.json(path, resolve))));
-	await newJSON(jsons);
+	await displayFromFiles(jsons);
 }
 
 ;(async function initialize() {
-	const [jsons, configs] = await loadJSON('visConfig') || [];
-	if (jsons && configs) {
-		const visConfig = displayBenchsWithConfigs(jsons, configs.map(config => BenchmarkConfig.fromJSON(config)));
+	const json = await loadJSON('visConfig');
+	if (json) {
+		const visConfig = VisConfig.fromJSON(json);
 		await visConfig.display();
 	} else {
-		example();
+		await loadExample();
 	}
 })();
