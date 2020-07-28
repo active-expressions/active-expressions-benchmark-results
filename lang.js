@@ -6,3 +6,16 @@ function extend(obj, definitions) {
         Object.defineProperty(obj, propName, descriptor);
     }
 }
+
+extend(HTMLElement.prototype, {
+    getJSONAttribute(name) {
+        let str = this.getAttribute(name);
+        if(str) { return JSON.parse(str); }
+        return null;
+    },
+
+    setJSONAttribute(name, json) {
+        this.setAttribute(name, JSON.stringify(json));
+        return json;
+    }
+});
