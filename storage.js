@@ -1,6 +1,6 @@
 
-export function loadJSON(key) {
-    const stringValue = localStorage.getItem(key);
+export async function loadJSON(key) {
+    const stringValue = await localforage.getItem(key);
 
     if (!stringValue) {
         return undefined;
@@ -9,8 +9,12 @@ export function loadJSON(key) {
     return JSON.parse(stringValue);
 }
 
-export function saveJSON(key, json) {
+export async function saveJSON(key, json) {
     const stringValue = JSON.stringify(json, undefined, 2);
 
-    localStorage.setItem(key, stringValue);
+    return await localforage.setItem(key, stringValue);
+}
+
+export async function removeItem(key) {
+    return localforage.removeItem(key);
 }

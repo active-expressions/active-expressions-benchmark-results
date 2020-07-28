@@ -1,7 +1,7 @@
 import './lodash.js';
 import { create, uuid, enableAutoResize } from './utils.js';
 import './lang.js';
-import { loadJSON, saveJSON } from './storage.js';
+import { loadJSON, saveJSON, removeItem } from './storage.js';
 
 var labels = true; // show the text labels beside individual boxplots?
 
@@ -578,7 +578,7 @@ async function onDrop(evt, url) {
 			return JSON.parse(text);
 		});
 		const jsons = await Promise.all(textPromises);
-		newJSON(jsons);
+		await newJSON(jsons);
 	} else {
 		const data = evt.dataTransfer.getData("text");
 		if (data) {
@@ -603,15 +603,15 @@ function displayBenchsWithConfigs(jsons, configs) {
 	return VisConfig.fromJSONsAndConfigs(jsons, configs);
 }
 
-function newJSON(jsons) {
+async function newJSON(jsons) {
 	const configs = jsons.map(json => BenchmarkConfig.fromBenchmarkFile(json));
 	const visConfig = displayBenchsWithConfigs(jsons, configs);
-	visConfig.display();
+	await visConfig.display();
 }
 
 const BENCHMARKS_STORE_ATTRIBUTE = 'benchmarks';
 
-document.querySelector('#generate').addEventListener('click', function onGenerate() {
+document.querySelector('#generate').addEventListener('click', async function onGenerate() {
 	if (!configContainer.hasAttribute(BENCHMARKS_STORE_ATTRIBUTE)) {
 		alert('no data to display yet.');
 		return;
@@ -619,11 +619,11 @@ document.querySelector('#generate').addEventListener('click', function onGenerat
 
 	const newJSONs = configContainer.getJSONAttribute(BENCHMARKS_STORE_ATTRIBUTE);
 	const visConfig = displayBenchsWithConfigs(newJSONs, getConfig());
-	visConfig.display();
+	await visConfig.display();
 });
 
-document.querySelector('#clearLocalStorage').addEventListener('click', function clearStorage() {
-	localStorage.removeItem('visConfig');
+document.querySelector('#clearLocalStorage').addEventListener('click', async function clearStorage() {
+	await removeItem('visConfig');
 });
 
 class VisConfig {
@@ -641,10 +641,10 @@ class VisConfig {
 		this.configs = configs;
 	}
 
-	display() {
+	async display() {
 		this.buildUI();
 		this.createChart();
-		this.saveLocalAs('visConfig');
+		await this.saveLocalAs('visConfig');
 	}
 
 	buildUI() {
@@ -697,8 +697,8 @@ class VisConfig {
 		});
 	}
 
-	saveLocalAs(key) {
-		saveJSON(key, [this.jsons, this.configs]);
+	async saveLocalAs(key) {
+		await saveJSON(key, [this.jsons, this.configs]);
 	}
 }
 
@@ -809,14 +809,14 @@ async function example() {
 		'./benchmarks/example/aexpr-construction.different-object.ticking.json',
 	]
 	const jsons = await Promise.all(paths.map(path => new Promise(resolve => d3.json(path, resolve))));
-	newJSON(jsons);
+	await newJSON(jsons);
 }
 
-;(function initialize() {
-	const [jsons, configs] = loadJSON('visConfig') || [];
+;(async function initialize() {
+	const [jsons, configs] = await loadJSON('visConfig') || [];
 	if (jsons && configs) {
 		const visConfig = displayBenchsWithConfigs(jsons, configs.map(config => BenchmarkConfig.fromJSON(config)));
-		visConfig.display();
+		await visConfig.display();
 	} else {
 		example();
 	}
