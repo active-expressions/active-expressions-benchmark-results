@@ -21,14 +21,11 @@ extend(HTMLElement.prototype, {
 });
 
 extend(Array.prototype, {
-    maxInData() {
-        let str = this.getAttribute(name);
-        if(str) { return JSON.parse(str); }
-        return null;
+    minInData() {
+        return this.reduce((acc, dat) => Math.min(acc, dat[1].reduce((acc, num) => Math.min(acc, num), Infinity)), Infinity);
     },
 
-    minInData() {
-        this.setAttribute(name, JSON.stringify(json));
-        return json;
-    }
+    maxInData() {
+        return this.reduce((acc, dat) => Math.max(acc, dat[1].reduce((acc, num) => Math.max(acc, num), -Infinity)), -Infinity);
+    },
 });

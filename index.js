@@ -15,10 +15,8 @@ function boxPlot(data, {
 	id,
 	title,
 	benchName,
-	min= data.reduce((acc, dat) => Math.min(acc, dat[1].reduce((acc, num) => Math.min(acc, num), Infinity
-	)), Infinity),
-	max = data.reduce((acc, dat) => Math.max(acc, dat[1].reduce((acc, num) => Math.max(acc, num), -Infinity
-	)), -Infinity),
+	min = data.minInData(),
+	max = data.maxInData(),
 	margin = defaultMargin,
 	width = 800 - margin.left - margin.right,
 	height = 450 - margin.top - margin.bottom,
@@ -295,10 +293,8 @@ function chartForSuite(benchmarkData, suiteNames) {
         id: createChartParentAndReturnId(),
         title: suiteNames.join(' - '),
         benchName: '-',
-		min: data.reduce((acc, dat) => Math.min(acc, dat[1].reduce((acc, num) => Math.min(acc, num), Infinity
-		)), Infinity),
-		max: data.reduce((acc, dat) => Math.max(acc, dat[1].reduce((acc, num) => Math.max(acc, num), -Infinity
-		)), -Infinity)
+		min: data.minInData(),
+		max: data.maxInData()
     });
 }
 function AEXPR_CONSTRUCTION_CHART(benchmarkData) {
@@ -362,10 +358,10 @@ function AEXPR_CONSTRUCTION_CHART(benchmarkData) {
 		.concat(dataSame.filter(interpretation));
 	interpretationData.sort();
 
-	let tickingAndRewritingMin = tickingAndRewritingData.reduce((acc, dat) => Math.min(acc, dat[1].reduce((acc, num) => Math.min(acc, num), Infinity)), Infinity);
-	let tickingAndRewritingMax = tickingAndRewritingData.reduce((acc, dat) => Math.max(acc, dat[1].reduce((acc, num) => Math.max(acc, num), -Infinity)), -Infinity);
-	let interpretationMin = interpretationData.reduce((acc, dat) => Math.min(acc, dat[1].reduce((acc, num) => Math.min(acc, num), Infinity)), Infinity);
-	let interpretationMax = interpretationData.reduce((acc, dat) => Math.max(acc, dat[1].reduce((acc, num) => Math.max(acc, num), -Infinity)), -Infinity);
+	let tickingAndRewritingMin = tickingAndRewritingData.minInData();
+	let tickingAndRewritingMax = tickingAndRewritingData.maxInData();
+	let interpretationMin = interpretationData.minInData();
+	let interpretationMax = interpretationData.maxInData();
 	const scale = 100;
 	tickingAndRewritingMin = Math.min(tickingAndRewritingMin, interpretationMin / scale);
 	tickingAndRewritingMax = Math.max(tickingAndRewritingMax, interpretationMax / scale);
@@ -842,8 +838,6 @@ class BenchmarkConfig {
 		return create('div', { class: 'benchConfig' }, [name, list]);
 	}
 }
-
-class Benchmark {}
 
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
