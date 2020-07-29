@@ -613,6 +613,8 @@ document.querySelector('#clearLocalStorage').addEventListener('click', async fun
 
 class VisConfig {
 
+	static get standardProps() { return ['width', 'height', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft']; }
+
 	static fromJSON(json) {
 		json.configs = json.configs.map(config => BenchmarkConfig.fromJSON(config));
 
@@ -631,16 +633,32 @@ class VisConfig {
 		}
 
 		const showLabels = document.getElementById(SHOW_LABELS_ID).checked;
+
+		const props = {};
+		VisConfig.standardProps.forEach(propName => {
+			const element = document.getElementById(propName);
+			if (!element) { return; }
+
+			props[propName] = parseFloat(element.value);
+		});
+
 		const jsons = configContainer.getJSONAttribute(BENCHMARKS_STORE_ATTRIBUTE);
 		const configs = Array.from(configContainer.querySelectorAll('.benchConfig'))
-			.map(parent => BenchmarkConfig.fromElement(parent));
+			.map(parent => BenchmarkConfig.fromUI(parent));
 
-		return new VisConfig({ jsons, configs, showLabels });
+		return new VisConfig(Object.assign({}, props, { jsons, configs, showLabels }));
 	}
 
 	constructor(params) {
 		const defaults = {
 			showLabels: true,
+
+			width: 800,
+			height: 400,
+			marginTop: 10,
+			marginRight: 10,
+			marginBottom: 100,
+			marginLeft: 60,
 		};
 		Object.assign(this, defaults, params);
 	}
@@ -660,6 +678,27 @@ class VisConfig {
 		container.innerHTML = `<label> <input id="${SHOW_LABELS_ID}" type="checkbox" ${checked}> Show Labels </label>`;
 		configContainer.append(container);
 
+		// width, height, margin
+		const props = ['width', 'height', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft'];
+		configContainer.append(create('div', {
+			id: 'props',
+		}, VisConfig.standardProps.map(propName => {
+			const propInput = create('input', {
+				id: propName,
+				type: 'text',
+				placeholder: propName,
+				class: 'variable-length bold',
+				value: this[propName],
+			});
+			enableAutoResize(propInput);
+
+			const label = create('label');
+			label.setAttribute('for', propInput.id);
+			label.innerHTML = propName;
+
+			return create('div', {}, [propInput, label]);
+		})));
+
 		configContainer.setJSONAttribute(BENCHMARKS_STORE_ATTRIBUTE, this.jsons);
 
 		this.configs.forEach(config => {
@@ -670,8 +709,8 @@ class VisConfig {
 	createChart() {
 		resetParent();
 
-		const data = this.jsons.flatMap((json, id) => {
-			const config = (this.configs)[id];
+
+		const data = _.zip(this.jsons, this.configs).flatMap(([json, config]) => {
 			const variationsToDisplay = config.variationsToDisplay;
 			const name = config.name;
 			const variations = json.variations;
@@ -690,9 +729,14 @@ class VisConfig {
 				});
 		});
 
-		const margin = Object.assign({}, defaultMargin, {top: 10}),
-			width = 800 - margin.left - margin.right,
-			height = 400 - margin.top - margin.bottom;
+		const margin = {
+				left: this.marginLeft,
+				right: this.marginRight,
+				top: this.marginTop,
+				bottom: this.marginBottom,
+			},
+			width = this.width - margin.left - margin.right,
+			height = this.height - margin.top - margin.bottom;
 
 		boxPlot(data, {
 			id: createChartParentAndReturnId(),
@@ -739,7 +783,7 @@ class BenchmarkConfig {
 		return new BenchmarkConfig(json);
 	}
 
-	static fromElement(parent) {
+	static fromUI(parent) {
 		const keys = Array.from(parent.querySelectorAll('dl dt')).map(e => e.innerHTML);
 
 		const labels = Array.from(parent.querySelectorAll('dl dd')).map(dd => {

@@ -19,3 +19,16 @@ extend(HTMLElement.prototype, {
         return json;
     }
 });
+
+extend(Array.prototype, {
+    maxInData() {
+        let str = this.getAttribute(name);
+        if(str) { return JSON.parse(str); }
+        return null;
+    },
+
+    minInData() {
+        this.setAttribute(name, JSON.stringify(json));
+        return json;
+    }
+});
