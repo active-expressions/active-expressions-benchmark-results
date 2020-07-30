@@ -593,7 +593,7 @@ async function displayFromFiles(jsons) {
 const BENCHMARKS_STORE_ATTRIBUTE = 'benchmarks';
 const SHOW_LABELS_ID = 'showLabels';
 
-document.querySelector('#generate').addEventListener('click', async function onGenerate() {
+async function onGenerate() {
 	const visConfig = VisConfig.fromUI();
 
 	if (visConfig) {
@@ -601,6 +601,18 @@ document.querySelector('#generate').addEventListener('click', async function onG
 	} else {
 		alert('no data to display yet.');
 	}
+}
+
+document.querySelector('#generate').addEventListener('click', onGenerate);
+document.body.addEventListener('keydown', evt => {
+	if (evt.ctrlKey && evt.code === "KeyS") {
+		evt.preventDefault();
+		evt.stopPropagation();
+
+		onGenerate();
+	}
+}, {
+	capture: true
 });
 
 document.querySelector('#clearLocalStorage').addEventListener('click', async function clearStorage() {
@@ -659,14 +671,15 @@ class VisConfig {
 
 	constructor(params) {
 		const defaults = {
-			height: 400,
+			showLabels: true,
 
 			width: 800,
+			height: 400,
+
 			marginTop: 10,
 			marginRight: 10,
 			marginBottom: 100,
 			marginLeft: 60,
-			showLabels: true,
 		};
 		Object.assign(this, defaults, params);
 	}
