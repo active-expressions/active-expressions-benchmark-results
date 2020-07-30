@@ -8,10 +8,22 @@ export function uuid() {
 
 export function create(tagName, attributes = {}, children = []) {
   const element = document.createElement(tagName);
-  Object.assign(element, attributes);
+
+  const specialProps = ['class', 'style'];
+  Object.assign(element, _.omit(attributes, specialProps));
+
   if (attributes.class) {
     element.classList.add(...attributes.class.split(' '));
   }
+
+  if (attributes.style) {
+    if (typeof attributes.style === 'object') {
+      Object.assign(element.style, attributes.style);
+    } else {
+      element.style = attributes.style;
+    }
+  }
+
   element.append(...children);
   return element;
 }

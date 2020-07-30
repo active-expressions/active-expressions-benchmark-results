@@ -622,7 +622,7 @@ document.querySelector('#clearLocalStorage').addEventListener('click', async fun
 
 class VisConfig {
 
-	static get standardProps() { return ['showLabels', 'width', 'height', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft']; }
+	static get standardProps() { return ['name', 'title', 'showLabels', 'width', 'height', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft']; }
 
 	static fromJSON(json) {
 		json.configs = json.configs.map(config => BenchmarkConfig.fromJSON(config));
@@ -673,11 +673,16 @@ class VisConfig {
 
 	constructor(params) {
 		const defaults = {
+			id: 'visconfig-' + uuid(),
+			name: 'a VisConfig name',
+
+			title: 'a benchmark',
+
 			showLabels: true,
 
+			// viewport
 			width: 800,
 			height: 400,
-
 			marginTop: 10,
 			marginRight: 10,
 			marginBottom: 100,
@@ -727,7 +732,14 @@ class VisConfig {
 			innerHTML: ' 📋',
 		}));
 
-		// width, height, margin
+		configContainer.append(create('div', {
+			style: {
+				fontSize: 'small'
+			},
+			innerHTML: this.id,
+		}, []));
+
+			// width, height, margin
 		configContainer.append(create('div', {
 			id: 'props',
 		}, VisConfig.standardProps.map(propName => {
@@ -812,7 +824,7 @@ class VisConfig {
 
 		boxPlot(data, {
 			id: createChartParentAndReturnId(),
-			title: 'TITLE',
+			title: this.title,
 			benchName: 'BENCHNAME',
 			// min: 0,//tickingAndRewritingMin,
 			// max: 10,//tickingAndRewritingMax,
