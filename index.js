@@ -1,5 +1,5 @@
 import './lodash.js';
-import {create, enableAutoResize, uuid} from './utils.js';
+import { create, enableAutoResize, uuid, copyTextToClipboard } from './utils.js';
 import './lang.js';
 import {loadJSON, removeItem, saveJSON} from './storage.js';
 
@@ -727,7 +727,7 @@ class VisConfig {
 		}));
 		configContainer.append(create('span', {
 			onclick: event => {
-				alert('not yet')
+				copyTextToClipboard(visAsString())
 			},
 			innerHTML: ' 📋',
 		}));
