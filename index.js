@@ -591,6 +591,7 @@ async function displayFromFiles(jsons) {
 }
 
 const BENCHMARKS_STORE_ATTRIBUTE = 'benchmarks';
+const PROPERTIES_STORE_ATTRIBUTE = 'properties';
 const SHOW_LABELS_ID = 'showLabels';
 
 async function onGenerate() {
@@ -640,6 +641,7 @@ class VisConfig {
 			return;
 		}
 
+		const savedProps = configContainer.getJSONAttribute(PROPERTIES_STORE_ATTRIBUTE);
 
 		const props = {};
 		VisConfig.standardProps.forEach(propName => {
@@ -663,7 +665,7 @@ class VisConfig {
 		const configs = Array.from(configContainer.querySelectorAll('.benchConfig'))
 			.map(parent => BenchmarkConfig.fromUI(parent));
 
-		return new VisConfig(Object.assign({}, props, {
+		return new VisConfig(Object.assign({}, savedProps, props, {
 			jsons,
 			configs,
 		}));
@@ -718,6 +720,12 @@ class VisConfig {
 			},
 			innerHTML: ' Drag into Apps',
 		}));
+		configContainer.append(create('span', {
+			onclick: event => {
+				alert('not yet')
+			},
+			innerHTML: ' 📋',
+		}));
 
 		// width, height, margin
 		configContainer.append(create('div', {
@@ -729,18 +737,30 @@ class VisConfig {
 				throw new TypeError('Property type in buildUI is not supported (' + type + ')')
 			}
 
-			const propInput = create('input', {
-				id: propName,
-				'data-type': type,
+			let propInput;
+			if (type === 'boolean') {
+				propInput = create('input', {
+					id: propName,
+					'data-type': type,
 
-				type: type === 'boolean' ? "checkbox" : 'text',
-				placeholder: propName,
-				class: 'variable-length bold',
-				value: type !== 'boolean' ? this[propName] : undefined,
-				checked: type === 'boolean' && value ? 'checked' : undefined,
-			});
-			if (propInput.type === "text") {
-				enableAutoResize(propInput);
+					type: "checkbox",
+				});
+				if (value) {
+					propInput.checked = 'checked';
+				}
+			} else if (type === 'number' || type === 'string') {
+				propInput = create('input', {
+					id: propName,
+					'data-type': type,
+
+					type: 'text',
+					placeholder: propName,
+					class: 'variable-length bold',
+					value: this[propName],
+				});
+				if (propInput.type === "text") {
+					enableAutoResize(propInput);
+				}
 			}
 
 			const label = create('label');
@@ -749,6 +769,8 @@ class VisConfig {
 
 			return create('div', {}, [label, propInput]);
 		})));
+
+		configContainer.setJSONAttribute(PROPERTIES_STORE_ATTRIBUTE, _.omit(this.toJSON2(), VisConfig.standardProps.concat(['jsons', 'configs'])));
 
 		configContainer.setJSONAttribute(BENCHMARKS_STORE_ATTRIBUTE, this.jsons);
 
