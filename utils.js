@@ -122,3 +122,20 @@ export function copyTextToClipboard(text) {
 
   document.body.removeChild(textArea);
 }
+
+export function remove(array, item) {
+  const index = array.indexOf(item);
+  const hasItem = index > -1;
+  if (hasItem) {
+    array.splice(index, 1);
+  }
+  return hasItem;
+}
+
+export function removeAll(array, condition) {
+  const toBeRemoved = array.filter(condition);
+  toBeRemoved.forEach(item => {
+    remove(array, item);
+  });
+  return toBeRemoved;
+}

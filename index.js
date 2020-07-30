@@ -1,5 +1,5 @@
 import './lodash.js';
-import { create, enableAutoResize, uuid, copyTextToClipboard } from './utils.js';
+import { create, enableAutoResize, uuid, copyTextToClipboard, remove, removeAll } from './utils.js';
 import './lang.js';
 import {loadJSON, removeItem, saveJSON} from './storage.js';
 
@@ -592,7 +592,6 @@ async function displayFromFiles(jsons) {
 
 const BENCHMARKS_STORE_ATTRIBUTE = 'benchmarks';
 const PROPERTIES_STORE_ATTRIBUTE = 'properties';
-const SHOW_LABELS_ID = 'showLabels';
 
 async function onGenerate() {
 	const visConfig = VisConfig.fromUI();
@@ -618,6 +617,7 @@ document.body.addEventListener('keydown', evt => {
 
 document.querySelector('#clearLocalStorage').addEventListener('click', async function clearStorage() {
 	await removeItem('visConfig');
+	await removeItem('all');
 });
 
 class VisConfig {
@@ -695,12 +695,13 @@ class VisConfig {
 		this.buildUI();
 		this.createChart();
 		await this.saveLocalAs('visConfig');
+		await NavBar.addOrUpdate(this);
 	}
 
 	buildUI() {
 		configContainer.innerHTML = '';
 
-		//
+		// exporting
 		function visAsString() {
 			const config = VisConfig.fromUI();
 			const json = config.toJSON2();
@@ -715,6 +716,9 @@ class VisConfig {
 				// file download contents, for dropping into a file system
 				event.dataTransfer.setData('DownloadURL', 'application/json:Static.json:' + url)
 			},
+			style: {
+				cursor: ' grab'
+			},
 			innerHTML: 'Drag onto Desktop',
 		}));
 		configContainer.append(create('span', {
@@ -723,15 +727,22 @@ class VisConfig {
 				// plain text, for dropping into text editor
 				event.dataTransfer.setData('text/plain', visAsString());
 			},
+			style: {
+				cursor: ' grab'
+			},
 			innerHTML: ' Drag into Apps',
 		}));
 		configContainer.append(create('span', {
 			onclick: event => {
 				copyTextToClipboard(visAsString())
 			},
+			style: {
+				cursor: 'pointer'
+			},
 			innerHTML: ' 📋',
 		}));
 
+		// id
 		configContainer.append(create('div', {
 			style: {
 				fontSize: 'small'
@@ -739,7 +750,7 @@ class VisConfig {
 			innerHTML: this.id,
 		}, []));
 
-			// width, height, margin
+		// width, height, margin
 		configContainer.append(create('div', {
 			id: 'props',
 		}, VisConfig.standardProps.map(propName => {
@@ -937,6 +948,95 @@ class BenchmarkConfig {
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
+const applicationBar = document.getElementById('nav-bar');
+const tabs = document.getElementById('tabs');
+
+let THE_CONFIGS = [];
+
+class NavBar {
+
+	static async addOrUpdate(visConfig) {
+		const desc = visConfig.toJSON2();
+		const index = THE_CONFIGS.findIndex(vc => vc.id === desc.id);
+		if (index <= -1) {
+			THE_CONFIGS.push(desc);
+		} else {
+			THE_CONFIGS[index] = desc;
+		}
+		this.displayBar();
+		await this.store();
+	}
+
+	static async remove(id) {
+		const confi = THE_CONFIGS.find(vc => vc.id === id);
+		if (!confi) {
+			alert('No config to remove!')
+			return;
+		}
+		if (confirm(`want to remove config '${confi.name}'`)) {
+			removeAll(THE_CONFIGS, vc => vc.id === id);
+			this.displayBar();
+			await this.store();
+		}
+	}
+
+	static displayBar() {
+		tabs.innerHTML = '';
+
+		THE_CONFIGS.forEach(confi => {
+			const id = confi.id;
+			const tab = create('span', {
+				class: 'tab',
+				innerHTML: confi.name,
+				onclick: async () => await this.open(id),
+				style: {
+					cursor: 'pointer'
+				}
+			}, [
+				create('span', {
+					innerHTML: '❌',
+					onclick: async evt => {
+						evt.stopPropagation();
+						evt.preventDefault();
+
+						await this.remove(id);
+					},
+					style: {
+						cursor: 'pointer',
+						fontSize: 'x-small',
+					}
+				})
+			]);
+			tabs.append(tab);
+		});
+	}
+
+	static async open(id) {
+		const json = THE_CONFIGS.find(vc => vc.id === id);
+		const visConfig = VisConfig.fromJSON(json);
+		await visConfig.display();
+	}
+
+	static async store() {
+		await saveJSON('all', THE_CONFIGS);
+	}
+
+	static async load() {
+		const json = await loadJSON('all');
+		if (json) {
+			THE_CONFIGS = json;
+		}
+
+		this.displayBar();
+	}
+}
+
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+
 async function loadFromPath(path) {
 	return new Promise(resolve => d3.json(path, resolve));
 }
@@ -953,6 +1053,9 @@ async function loadExample() {
 }
 
 ;(async function initialize() {
+	await NavBar.load();
+	// alert(document.body.querySelector('[vis-config-id="foo"]'))
+
 	const json = await loadJSON('visConfig');
 	if (json) {
 		const visConfig = VisConfig.fromJSON(json);
