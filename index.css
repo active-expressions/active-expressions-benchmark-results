@@ -25,6 +25,12 @@ input.variable-length {
     /* outline: black dashed 1px; */
 }
 
+#crowbar {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+}
+
 input.bold {
     font-weight: bold;
 }
@@ -54,7 +60,7 @@ header {
 #bench {
     grid-column: 1 / 2;
 
-    overflow: auto;
+    overflow-y: auto;
 }
 
 #charts {

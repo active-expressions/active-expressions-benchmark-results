@@ -211,12 +211,12 @@ function resetAndBuildInfo(data) {
 }
 
 function resetParent() {
-	let chartParent = document.querySelector('#charts');
+	const chartParent = document.querySelector('#charts');
 	chartParent.innerHTML = '';
 }
 
 function guidGenerator() {
-	var S4 = function() {
+	const S4 = function() {
 		return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
 	};
 	return (S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4()+S4());
@@ -609,7 +609,7 @@ document.querySelector('#clearLocalStorage').addEventListener('click', async fun
 
 class VisConfig {
 
-	static get standardProps() { return ['width', 'height', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft']; }
+	static get standardProps() { return ['showLabels', 'width', 'height', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft']; }
 
 	static fromJSON(json) {
 		json.configs = json.configs.map(config => BenchmarkConfig.fromJSON(config));
@@ -628,33 +628,45 @@ class VisConfig {
 			return;
 		}
 
-		const showLabels = document.getElementById(SHOW_LABELS_ID).checked;
 
 		const props = {};
 		VisConfig.standardProps.forEach(propName => {
 			const element = document.getElementById(propName);
 			if (!element) { return; }
 
-			props[propName] = parseFloat(element.value);
+			const type = element['data-type'];
+
+			if (type === 'boolean') {
+				props[propName] = element.checked;
+			} else if(type === 'string') {
+				props[propName] = element.value;
+			} else if (type === 'number') {
+				props[propName] = parseFloat(element.value);
+			}
+
 		});
 
 		const jsons = configContainer.getJSONAttribute(BENCHMARKS_STORE_ATTRIBUTE);
+
 		const configs = Array.from(configContainer.querySelectorAll('.benchConfig'))
 			.map(parent => BenchmarkConfig.fromUI(parent));
 
-		return new VisConfig(Object.assign({}, props, { jsons, configs, showLabels }));
+		return new VisConfig(Object.assign({}, props, {
+			jsons,
+			configs,
+		}));
 	}
 
 	constructor(params) {
 		const defaults = {
-			showLabels: true,
+			height: 400,
 
 			width: 800,
-			height: 400,
 			marginTop: 10,
 			marginRight: 10,
 			marginBottom: 100,
 			marginLeft: 60,
+			showLabels: true,
 		};
 		Object.assign(this, defaults, params);
 	}
@@ -668,31 +680,61 @@ class VisConfig {
 	buildUI() {
 		configContainer.innerHTML = '';
 
-		// show labels checkbox
-		let container = create('div');
-		const checked = this.showLabels ? 'checked' : '';
-		container.innerHTML = `<label> <input id="${SHOW_LABELS_ID}" type="checkbox" ${checked}> Show Labels </label>`;
-		configContainer.append(container);
+		//
+		function visAsString() {
+			const config = VisConfig.fromUI();
+			const json = config.toJSON2();
+			return JSON.stringify(json);
+		}
+		configContainer.append(create('span', {
+			draggable: true,
+			ondragstart: event => {
+				var textToWrite = visAsString();
+				var textFileAsBlob = new Blob([textToWrite], {type: 'application/json'});
+				var url = window.URL.createObjectURL(textFileAsBlob);
+				// file download contents, for dropping into a file system
+				event.dataTransfer.setData('DownloadURL', 'application/json:Static.json:' + url)
+			},
+			innerHTML: 'Drag onto Desktop',
+		}));
+		configContainer.append(create('span', {
+			draggable: true,
+			ondragstart: event => {
+				// plain text, for dropping into text editor
+				event.dataTransfer.setData('text/plain', visAsString());
+			},
+			innerHTML: ' Drag into Apps',
+		}));
 
 		// width, height, margin
-		const props = ['width', 'height', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft'];
 		configContainer.append(create('div', {
 			id: 'props',
 		}, VisConfig.standardProps.map(propName => {
+			const value = this[propName];
+			const type = typeof value;
+			if (!["number", "boolean", "string"].includes(type)) {
+				throw new TypeError('Property type in buildUI is not supported (' + type + ')')
+			}
+
 			const propInput = create('input', {
 				id: propName,
-				type: 'text',
+				'data-type': type,
+
+				type: type === 'boolean' ? "checkbox" : 'text',
 				placeholder: propName,
 				class: 'variable-length bold',
-				value: this[propName],
+				value: type !== 'boolean' ? this[propName] : undefined,
+				checked: type === 'boolean' && value ? 'checked' : undefined,
 			});
-			enableAutoResize(propInput);
+			if (propInput.type === "text") {
+				enableAutoResize(propInput);
+			}
 
 			const label = create('label');
 			label.setAttribute('for', propInput.id);
-			label.innerHTML = propName;
+			label.innerHTML = propName + ' ';
 
-			return create('div', {}, [propInput, label]);
+			return create('div', {}, [label, propInput]);
 		})));
 
 		configContainer.setJSONAttribute(BENCHMARKS_STORE_ATTRIBUTE, this.jsons);
@@ -704,7 +746,6 @@ class VisConfig {
 
 	createChart() {
 		resetParent();
-
 
 		const data = _.zip(this.jsons, this.configs).flatMap(([json, config]) => {
 			const variationsToDisplay = config.variationsToDisplay;
@@ -746,6 +787,10 @@ class VisConfig {
 			// numberOfElementsPerChunk: 2,
 			showLabels: this.showLabels,
 		});
+	}
+
+	toJSON2() {
+		return JSON.parse(JSON.stringify(this));
 	}
 
 	async saveLocalAs(key) {
@@ -845,14 +890,18 @@ class BenchmarkConfig {
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
+async function loadFromPath(path) {
+	return new Promise(resolve => d3.json(path, resolve));
+}
+
 async function loadExample() {
 	const paths = [
 		'./benchmarks/example/aexpr-construction.different-object.interpretation.json',
 		'./benchmarks/example/aexpr-construction.different-object.proxies.json',
 		'./benchmarks/example/aexpr-construction.different-object.rewriting.json',
 		'./benchmarks/example/aexpr-construction.different-object.ticking.json',
-	]
-	const jsons = await Promise.all(paths.map(path => new Promise(resolve => d3.json(path, resolve))));
+	];
+	const jsons = await Promise.all(paths.map(loadFromPath));
 	await displayFromFiles(jsons);
 }
 
