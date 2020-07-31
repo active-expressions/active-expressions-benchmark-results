@@ -14,12 +14,16 @@
 
 <div id="container">
     <header class="panel">
-        <div id="drop-area">
-            <span class="no-drag">Drop Area</span>
-            <span class="on-drag">Drop Here</span>
-        </div>
-
-        <div id="info" class="panel"></div>
+        <span>
+            <span id="drop-area">
+                <span class="no-drag">Drop Area</span>
+                <span class="on-drag">Drop Here</span>
+            </span>
+            <span>
+                <textarea id="file-paths-area"placeholder="file path relative to page, one line each"></textarea>
+                <button id="load-file-paths">Load File Paths</button>
+            </span>
+        </span>
         <div id="buttons" class="panel">
             <button id="generate">Generate</button>
             <button id="clearLocalStorage">Clear Local Storage</button>

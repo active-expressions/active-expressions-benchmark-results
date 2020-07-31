@@ -556,6 +556,7 @@ async function onDrop(evt, url) {
 
 	const files = evt.dataTransfer.files;
 	if (files && files.length > 0) {
+		debugger
 		const textPromises = Array.from(files).map(async file => {
 			const dataURL = await readBlobAsDataURL(file);
 			const blob = await fetch(dataURL).then(r => r.blob());
@@ -618,6 +619,7 @@ document.body.addEventListener('keydown', evt => {
 document.querySelector('#clearLocalStorage').addEventListener('click', async function clearStorage() {
 	await removeItem('visConfig');
 	await removeItem('all');
+	localStorage.removeItem('text-area-for-paths');
 });
 
 class VisConfig {
@@ -815,7 +817,7 @@ class VisConfig {
 					return Object.entries(variation.parameters).every(([key, value]) => {
 						const c = variationsToDisplay[key]
 						return c && c.find(([v, shouldInclude]) => v === value && shouldInclude);
-					})
+					});
 				})
 				.map(variation => {
 					const params = Object.entries(variation.parameters).map((([key, value]) => `${key}:${value}`)).join(', ')
@@ -851,8 +853,13 @@ class VisConfig {
 		return JSON.parse(JSON.stringify(this));
 	}
 
+	toJSON() {
+		return Object.assign({}, this);
+	}
+
 	async saveLocalAs(key) {
-		await saveJSON(key, this);
+		const json = this.toJSON2();
+		await saveJSON(key, json);
 	}
 }
 
@@ -1064,3 +1071,32 @@ async function loadExample() {
 		await loadExample();
 	}
 })();
+
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+
+{
+	const filePathsArea = document.getElementById('file-paths-area');
+	const text = localStorage.getItem('text-area-for-paths')
+	if (text) {
+		filePathsArea.value = text;
+	}
+	filePathsArea.addEventListener('input', evt => {
+		localStorage.setItem('text-area-for-paths', filePathsArea.value);
+	});
+
+	const button = document.getElementById('load-file-paths');
+	button.addEventListener('click', async function loadFilePaths(evt) {
+		const content = filePathsArea.value;
+		if (content === '') {
+			alert('no path given');
+			return;
+		}
+		const paths = content.split('\n').map(str => str.trim()).filter(str => str !== '');
+		const jsons = await Promise.all(paths.map(loadFromPath));
+		await displayFromFiles(jsons);
+	});
+}
