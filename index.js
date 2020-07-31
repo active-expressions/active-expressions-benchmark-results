@@ -635,14 +635,10 @@ class VisConfig {
 	static fromBenchmarkFiles(jsons) {
 		const configs = jsons.map(json => BenchmarkConfig.fromBenchmarkFile(json));
 
-		return new VisConfig({ jsons, configs });
+		return new VisConfig({ configs });
 	}
 
 	static fromUI() {
-		if (!configContainer.hasAttribute(BENCHMARKS_STORE_ATTRIBUTE)) {
-			return;
-		}
-
 		const savedProps = configContainer.getJSONAttribute(PROPERTIES_STORE_ATTRIBUTE);
 
 		const props = {};
@@ -662,13 +658,10 @@ class VisConfig {
 
 		});
 
-		const jsons = configContainer.getJSONAttribute(BENCHMARKS_STORE_ATTRIBUTE);
-
 		const configs = Array.from(configContainer.querySelectorAll('.benchConfig'))
 			.map(parent => BenchmarkConfig.fromUI(parent));
 
 		return new VisConfig(Object.assign({}, savedProps, props, {
-			jsons,
 			configs,
 		}));
 	}
@@ -795,9 +788,7 @@ class VisConfig {
 			return create('div', {}, [label, propInput]);
 		})));
 
-		configContainer.setJSONAttribute(PROPERTIES_STORE_ATTRIBUTE, _.omit(this.toJSON2(), VisConfig.standardProps.concat(['jsons', 'configs'])));
-
-		configContainer.setJSONAttribute(BENCHMARKS_STORE_ATTRIBUTE, this.jsons);
+		configContainer.setJSONAttribute(PROPERTIES_STORE_ATTRIBUTE, _.omit(this.toJSON2(), VisConfig.standardProps.concat(['configs'])));
 
 		this.configs.forEach(config => {
 			configContainer.append(config.buildUI());
@@ -807,7 +798,8 @@ class VisConfig {
 	createChart() {
 		resetParent();
 
-		const data = _.zip(this.jsons, this.configs).flatMap(([json, config]) => {
+		const data = this.configs.flatMap(config => {
+			const json = config.benchmark;
 			const variationsToDisplay = config.variationsToDisplay;
 			const name = config.name;
 			const variations = json.variations;
@@ -869,8 +861,8 @@ function copyJSON(json) {
 
 class BenchmarkConfig {
 
-	static fromBenchmarkFile(json) {
-		const config = copyJSON(json.config);
+	static fromBenchmarkFile(benchmark) {
+		const config = copyJSON(benchmark.config);
 
 		for (let values of Object.values(config)) {
 			values.forEach((value, id) => {
@@ -879,7 +871,8 @@ class BenchmarkConfig {
 		}
 
 		return new BenchmarkConfig({
-			name: json.name,
+			name: benchmark.name,
+			benchmark,
 			variationsToDisplay: config
 		});
 	}
@@ -890,6 +883,8 @@ class BenchmarkConfig {
 	}
 
 	static fromUI(parent) {
+		const benchmark = parent.getJSONAttribute(BENCHMARKS_STORE_ATTRIBUTE);
+
 		const keys = Array.from(parent.querySelectorAll('dl dt')).map(e => e.innerHTML);
 
 		const labels = Array.from(parent.querySelectorAll('dl dd')).map(dd => {
@@ -902,13 +897,13 @@ class BenchmarkConfig {
 
 		return new BenchmarkConfig({
 			name: parent.querySelector('input.name').value,
+			benchmark,
 			variationsToDisplay: _.fromPairs(_.zip(keys, labels))
 		});
 	}
 
-	constructor({ name, variationsToDisplay }) {
-		this.name = name;
-		this.variationsToDisplay = variationsToDisplay;
+	constructor(params) {
+		Object.assign(this, params);
 	}
 
 	buildUI() {
@@ -945,7 +940,11 @@ class BenchmarkConfig {
 		});
 		enableAutoResize(name);
 
-		return create('div', { class: 'benchConfig' }, [name, list]);
+		const parent = create('div', { class: 'benchConfig' }, [name, list]);
+
+		parent.setJSONAttribute(BENCHMARKS_STORE_ATTRIBUTE, this.benchmark);
+
+		return parent;
 	}
 }
 
@@ -1061,7 +1060,6 @@ async function loadExample() {
 
 ;(async function initialize() {
 	await NavBar.load();
-	// alert(document.body.querySelector('[vis-config-id="foo"]'))
 
 	const json = await loadJSON('visConfig');
 	if (json) {
