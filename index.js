@@ -1,5 +1,5 @@
 import './lodash.js';
-import { create, enableAutoResize, uuid, copyTextToClipboard, remove, removeAll } from './utils.js';
+import {copyTextToClipboard, create, enableAutoResize, removeAll, uuid} from './utils.js';
 import './lang.js';
 import {loadJSON, removeItem, saveJSON} from './storage.js';
 
@@ -554,27 +554,51 @@ async function onDrop(evt, url) {
 		});
 	}
 
-	const files = evt.dataTransfer.files;
-	if (files && files.length > 0) {
-		debugger
+	function readDraggedFiles(files) {
 		const textPromises = Array.from(files).map(async file => {
 			const dataURL = await readBlobAsDataURL(file);
 			const blob = await fetch(dataURL).then(r => r.blob());
-			const text = await blob.text();
-			return JSON.parse(text);
+			return await blob.text();
 		});
-		const jsons = await Promise.all(textPromises);
-		await displayFromFiles(jsons);
-	} else {
-		const data = evt.dataTransfer.getData("text");
-		if (data) {
-			dropArea.append(data);
-		} else {
-			alert('drop contained no files or text data');
-		}
+		return Promise.all(textPromises);
 	}
 
-	return true;
+	const files = evt.dataTransfer.files;
+	if (files && files.length > 0) {
+		const texts = await readDraggedFiles(files);
+		const jsons = texts.map(JSON.parse);
+
+		if (jsons.some(json => json && typeof json.id === 'string' && json.id.startsWith('visconfig'))) {
+			// #TODO: drop visconfig files
+			alert('dropping whole visconfig files is not yet supported');
+			return;
+		}
+
+		await displayFromFiles(jsons);
+		return;
+	}
+
+	const text = evt.dataTransfer.getData("text");
+	if (text) {
+		let json;
+
+		try {
+			json = JSON.parse(text);
+		} catch(e) {
+			alert('did not drop a valid json');
+			return;
+		}
+
+		alert('dropping files as text is not yet supported');
+
+		// #TODO: differentiate visconfig, multiple benchconfigs, a single bench
+		if (!Array.isArray(json)) {
+		}
+
+		return;
+	}
+
+	alert('drop contained no files or text data');
 }
 
 // ------------------------------------------------------------------------------------------------------------
@@ -626,15 +650,20 @@ class VisConfig {
 
 	static get standardProps() { return ['name', 'title', 'showLabels', 'width', 'height', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft']; }
 
-	static fromJSON(json) {
-		json.configs = json.configs.map(config => BenchmarkConfig.fromJSON(config));
+	static async fromJSON(json) {
+		json.configs = await Promise.all(json.configs.map(async config => BenchmarkConfig.fromJSON(config)));
 
 		return new VisConfig(json);
 	}
 
-	static fromBenchmarkFiles(jsons) {
-		const configs = jsons.map(json => BenchmarkConfig.fromBenchmarkFile(json));
+	static fromBenchmarkFiles(benchmarks) {
+		const configs = benchmarks.map(benchmark => BenchmarkConfig.fromBenchmarkFile(benchmark));
 
+		return new VisConfig({ configs });
+	}
+
+	static async fromPaths(paths) {
+		const configs = await Promise.all(paths.map(path => BenchmarkConfig.fromPath(path)));
 		return new VisConfig({ configs });
 	}
 
@@ -681,7 +710,7 @@ class VisConfig {
 			marginTop: 10,
 			marginRight: 10,
 			marginBottom: 100,
-			marginLeft: 60,
+			marginLeft: 100,
 		};
 		Object.assign(this, defaults, params);
 	}
@@ -709,12 +738,13 @@ class VisConfig {
 				var textFileAsBlob = new Blob([textToWrite], {type: 'application/json'});
 				var url = window.URL.createObjectURL(textFileAsBlob);
 				// file download contents, for dropping into a file system
-				event.dataTransfer.setData('DownloadURL', 'application/json:Static.json:' + url)
+				event.dataTransfer.setData('DownloadURL', `application/json:${VisConfig.fromUI().name}.json:` + url)
 			},
 			style: {
 				cursor: ' grab'
 			},
-			innerHTML: 'Drag onto Desktop',
+			title: 'drag onto desktop (works in Chrome only)',
+			innerHTML: '🖥️',
 		}));
 		configContainer.append(create('span', {
 			draggable: true,
@@ -725,7 +755,8 @@ class VisConfig {
 			style: {
 				cursor: ' grab'
 			},
-			innerHTML: ' Drag into Apps',
+			title: 'drag into applications',
+			innerHTML: ' 📲',
 		}));
 		configContainer.append(create('span', {
 			onclick: event => {
@@ -734,6 +765,7 @@ class VisConfig {
 			style: {
 				cursor: 'pointer'
 			},
+			title: 'copy to clipboard',
 			innerHTML: ' 📋',
 		}));
 
@@ -798,25 +830,7 @@ class VisConfig {
 	createChart() {
 		resetParent();
 
-		const data = this.configs.flatMap(config => {
-			const json = config.benchmark;
-			const variationsToDisplay = config.variationsToDisplay;
-			const name = config.name;
-			const variations = json.variations;
-
-			return variations
-				.filter(variation => {
-					return Object.entries(variation.parameters).every(([key, value]) => {
-						const c = variationsToDisplay[key]
-						return c && c.find(([v, shouldInclude]) => v === value && shouldInclude);
-					});
-				})
-				.map(variation => {
-					const params = Object.entries(variation.parameters).map((([key, value]) => `${key}:${value}`)).join(', ')
-					const values = variation.executions.flatMap(e => e.iterations.map(i => i.elapsed));
-					return [`${name} (${params})`, values];
-				});
-		});
+		const data = this.configs.flatMap(config => config.dataToDisplay());
 
 		const margin = {
 				left: this.marginLeft,
@@ -853,10 +867,23 @@ class VisConfig {
 		const json = this.toJSON2();
 		await saveJSON(key, json);
 	}
+
 }
 
 function copyJSON(json) {
 	return JSON.parse(JSON.stringify(json));
+}
+
+function variationsFromBenchmark(benchmark) {
+	const config = copyJSON(benchmark.config);
+
+	for (let values of Object.values(config)) {
+		values.forEach((value, id) => {
+			values[id] = [value, true];
+		});
+	}
+
+	return config;
 }
 
 class BenchmarkConfig {
@@ -873,12 +900,28 @@ class BenchmarkConfig {
 		return new BenchmarkConfig({
 			name: benchmark.name,
 			benchmark,
-			variationsToDisplay: config
+			variationsToDisplay: variationsFromBenchmark(benchmark)
+		});
+	}
+
+	static async fromPath(path) {
+		const benchmark = await loadFromPath(path);
+
+		return new BenchmarkConfig({
+			name: benchmark.name,
+			benchmarkPath: path,
+			benchmark,
+			variationsToDisplay: variationsFromBenchmark(benchmark)
 		});
 	}
 
 	// = deserialize
-	static fromJSON(json) {
+	static async fromJSON(json) {
+		if (json.benchmarkPath) {
+			Object.assign(json, {
+				benchmark: await loadFromPath(json.benchmarkPath)
+			});
+		}
 		return new BenchmarkConfig(json);
 	}
 
@@ -895,9 +938,16 @@ class BenchmarkConfig {
 				]);
 		});
 
+		let benchmarkPath;
+		const path = parent.querySelector('.benchmarkPath');
+		if (path) {
+			benchmarkPath = path.innerHTML;
+		}
+
 		return new BenchmarkConfig({
 			name: parent.querySelector('input.name').value,
 			benchmark,
+			benchmarkPath,
 			variationsToDisplay: _.fromPairs(_.zip(keys, labels))
 		});
 	}
@@ -942,9 +992,40 @@ class BenchmarkConfig {
 
 		const parent = create('div', { class: 'benchConfig' }, [name, list]);
 
+		if (this.benchmarkPath) {
+			parent.append(create('span', {
+				class: 'benchmarkPath',
+				innerHTML: this.benchmarkPath
+			}));
+		}
+
 		parent.setJSONAttribute(BENCHMARKS_STORE_ATTRIBUTE, this.benchmark);
 
 		return parent;
+	}
+
+	dataToDisplay() {
+		return this.benchmark.variations
+			.filter(variation => {
+				return Object.entries(variation.parameters).every(([key, value]) => {
+					const c = this.variationsToDisplay[key];
+					return c && c.find(([v, shouldInclude]) => v === value && shouldInclude);
+				});
+			})
+			.map(variation => {
+				const params = Object.entries(variation.parameters).map((([key, value]) => `${key}:${value}`)).join(', ')
+				const values = variation.executions.flatMap(e => e.iterations.map(i => i.elapsed));
+				return [`${(this.name)} (${params})`, values];
+			});
+	}
+
+	toJSON() {
+		const json = Object.assign({}, this);
+		if (json.benchmarkPath) {
+			return _.omit(json, ['benchmark']);
+		} else {
+			return json;
+		}
 	}
 }
 
@@ -1019,7 +1100,7 @@ class NavBar {
 
 	static async open(id) {
 		const json = THE_CONFIGS.find(vc => vc.id === id);
-		const visConfig = VisConfig.fromJSON(json);
+		const visConfig = await VisConfig.fromJSON(json);
 		await visConfig.display();
 	}
 
@@ -1063,7 +1144,7 @@ async function loadExample() {
 
 	const json = await loadJSON('visConfig');
 	if (json) {
-		const visConfig = VisConfig.fromJSON(json);
+		const visConfig = await VisConfig.fromJSON(json);
 		await visConfig.display();
 	} else {
 		await loadExample();
@@ -1094,7 +1175,7 @@ async function loadExample() {
 			return;
 		}
 		const paths = content.split('\n').map(str => str.trim()).filter(str => str !== '');
-		const jsons = await Promise.all(paths.map(loadFromPath));
-		await displayFromFiles(jsons);
+		const visConfig = await VisConfig.fromPaths(paths);
+		await visConfig.display();
 	});
 }
