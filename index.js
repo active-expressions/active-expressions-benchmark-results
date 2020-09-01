@@ -1172,11 +1172,12 @@ async function loadExample() {
 
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------------------
+// ----------------- MODAL MENU - LOAD PATH -------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
 {
+	// open/close the menu
 	const loadPathMenu = document.getElementById('modal-load-paths');
 	function showPathMenu() {
 		loadPathMenu.classList.add('show');
@@ -1194,6 +1195,7 @@ async function loadExample() {
 		}
 	});
 
+	// file paths input area resizing
 	const filePathsArea = document.getElementById('file-paths-area');
 	function autoGrowFilePathArea() {
 		filePathsArea.style.height = "5px";
@@ -1209,6 +1211,7 @@ async function loadExample() {
 		autoGrowFilePathArea();
 	});
 
+	// actual loading of files
 	const button = document.getElementById('load-file-paths');
 	button.addEventListener('click', async function loadFilePaths(evt) {
 		const content = filePathsArea.value;
