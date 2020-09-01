@@ -525,23 +525,37 @@ function createFailureMessage(message) {
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-const dropArea = document.querySelector('#drop-area');
-dropArea.addEventListener('dragenter', evt => dropArea.classList.add("drag"), false);
-dropArea.addEventListener('dragleave', evt => dropArea.classList.remove("drag"), false);
-dropArea.addEventListener("drop", evt => onDrop(evt));
-dropArea.addEventListener("dragover", evt => onDragOver(evt));
+const modalDrop = document.getElementById('modal-drop');
+
+function activateDrag(evt) {
+	if (evt.dataTransfer.types.includes('is-from-me')) {
+		return;
+	}
+	modalDrop.classList.add("show");
+	modalDrop.classList.add("dragging");
+}
+
+function deactivateDrag(evt) {
+	modalDrop.classList.remove("show");
+	modalDrop.classList.remove('dragging');
+}
+
+document.body.addEventListener('dragenter', activateDrag);
+modalDrop.addEventListener('dragleave', deactivateDrag);
+modalDrop.addEventListener("drop", onDrop);
+modalDrop.addEventListener("dragover", onDragOver);
 
 function onDragOver(evt) {
-	const mode = evt.shiftKey ? "move" : "copy";
+	const mode = evt.shiftKey ? "copy" : "move";
 
 	evt.dataTransfer.dropEffect = mode;
-	dropArea.transferMode = mode;
+	modalDrop.transferMode = mode;
 
 	evt.preventDefault();
 }
 
 async function onDrop(evt, url) {
-	dropArea.classList.remove("drag");
+	deactivateDrag(evt);
 
 	evt.preventDefault();
 	evt.stopPropagation();
@@ -731,6 +745,9 @@ class VisConfig {
 			const json = config.toJSON2();
 			return JSON.stringify(json);
 		}
+		function markAsFromMe(evt) {
+			evt.dataTransfer.setData('is-from-me', 'yes');
+		}
 		configContainer.append(create('span', {
 			draggable: true,
 			ondragstart: event => {
@@ -738,7 +755,8 @@ class VisConfig {
 				var textFileAsBlob = new Blob([textToWrite], {type: 'application/json'});
 				var url = window.URL.createObjectURL(textFileAsBlob);
 				// file download contents, for dropping into a file system
-				event.dataTransfer.setData('DownloadURL', `application/json:${VisConfig.fromUI().name}.json:` + url)
+				event.dataTransfer.setData('DownloadURL', `application/json:${VisConfig.fromUI().name}.json:` + url);
+				markAsFromMe(event);
 			},
 			style: {
 				cursor: ' grab'
@@ -751,6 +769,7 @@ class VisConfig {
 			ondragstart: event => {
 				// plain text, for dropping into text editor
 				event.dataTransfer.setData('text/plain', visAsString());
+				markAsFromMe(event);
 			},
 			style: {
 				cursor: ' grab'

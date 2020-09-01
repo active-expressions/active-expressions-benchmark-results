@@ -9,15 +9,14 @@
 <link rel="stylesheet" type="text/css" media="screen" href="tooltip.css">
 <link rel="stylesheet" type="text/css" media="screen" href="errors.css">
 <link rel="stylesheet" type="text/css" media="screen" href="drop-aera.css">
+<link rel="stylesheet" type="text/css" media="screen" href="modal.css">
+<link rel="stylesheet" type="text/css" media="screen" href="input-variable-length.css">
+
 <body>
 
 <div id="container">
     <header class="panel">
         <span>
-            <span id="drop-area" title="drop (multiple) benchmark files here to display them as a new config. (hold Shift to add them to the currently displayed config)">
-                <span class="no-drag">Drop Area</span>
-                <span class="on-drag">Drop Here</span>
-            </span>
             <span>
                 <textarea id="file-paths-area" title="line-separated list of file paths relative to this page's url." placeholder="file path relative to page, one line each"></textarea>
                 <button id="load-file-paths">Load File Paths</button>
@@ -41,10 +40,21 @@
         <button id="generate">Generate</button>
         <button id="clearLocalStorage"title="clear all temporarily stored files (for development purpose only)">Clear Local Storage</button>
         <button>
-            <a id='crowbar' class="svg-crowbar" href="javascript:javascript: (function () { var e = document.createElement('script'); e.setAttribute('src', 'https://nytimes.github.io/svg-crowbar/svg-crowbar.js'); e.setAttribute('class', 'svg-crowbar'); document.body.appendChild(e); })();">Export Charts</a>&nbsp;
+            <a id='crowbar' class="svg-crowbar" href="javascript:javascript: (function () { var e = document.createElement('script'); e.setAttribute('src', 'https://nytimes.github.io/svg-crowbar/svg-crowbar.js'); e.setAttribute('class', 'svg-crowbar'); document.body.appendChild(e); })();">Export Chart</a>&nbsp;
         </button>
     </div>
 
+</div>
+
+<div id="modal-drop" class="modal">
+    <div class="modal-content">
+        <div id="modal-drop-main">
+            drop (multiple) benchmark files here to display them as a new config
+        </div>
+        <div id="modal-drop-sub">
+            (hold Shift to add them to the currently displayed config)
+        </div>
+    </div>
 </div>
 
 

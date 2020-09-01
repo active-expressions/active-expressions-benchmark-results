@@ -1,29 +1,21 @@
 
-#drop-area {
-    border: 2px solid darkgrey;
-    background-color: lightgrey;
-
-    width: 300px;
-    height: 100px;
-
+#modal-drop .modal-content {
     text-align: center;
-    vertical-align: middle;
-    min-height: 10em;
-    display: table-cell;
+
+    font-family: Verdana;
+    font-variant: all-petite-caps;
+    font-weight: bold;
 }
 
-#drop-area.drag {
-    border: 2px solid orange;
-    background-color: beige;
+#modal-drop #modal-drop-main {
+    font-size: 28px;
 }
 
-#drop-area .on-drag {
-    display: none;
+#modal-drop #modal-drop-sub {
+    font-size: 24px;
+    color: #afafaf;
 }
-#drop-area.drag .no-drag {
-    display: none;
-}
-#drop-area.drag .on-drag {
-    display: initial;
-    color: orange;
+
+#modal-drop * {
+    pointer-events: none;
 }
