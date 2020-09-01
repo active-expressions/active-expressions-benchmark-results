@@ -25,12 +25,6 @@ input.variable-length {
     /* outline: black dashed 1px; */
 }
 
-#crowbar {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-}
-
 input.bold {
     font-weight: bold;
 }
@@ -42,7 +36,7 @@ body {
 }
 #container {
     display: grid;
-    grid-template: auto auto auto 1fr  / auto 1fr;
+    grid-template: auto auto 1fr auto / auto 1fr;
 
     width: calc(100vw - 2px);
     height: calc(100vh - 2px);
