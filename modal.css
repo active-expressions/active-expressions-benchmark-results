@@ -16,3 +16,16 @@
 .modal.show {
     display: grid;
 }
+
+/*
+Load Paths Menu
+*/
+#modal-load-paths {
+    vertical-align: middle;
+    text-align: center;
+}
+
+#file-paths-area {
+    width: 90vw;
+    resize: none;
+}

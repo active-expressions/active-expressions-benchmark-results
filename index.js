@@ -1177,13 +1177,36 @@ async function loadExample() {
 // ------------------------------------------------------------------------------------------------------------
 
 {
+	const loadPathMenu = document.getElementById('modal-load-paths');
+	function showPathMenu() {
+		loadPathMenu.classList.add('show');
+		autoGrowFilePathArea();
+	}
+	const openPathMenu = document.getElementById('open-path-menu');
+	openPathMenu.addEventListener('click', showPathMenu);
+
+	function closePathMenu() {
+		loadPathMenu.classList.remove('show');
+	}
+	loadPathMenu.addEventListener('click', evt => {
+		if (evt.target === loadPathMenu) {
+			closePathMenu();
+		}
+	});
+
 	const filePathsArea = document.getElementById('file-paths-area');
-	const text = localStorage.getItem('text-area-for-paths')
+	function autoGrowFilePathArea() {
+		filePathsArea.style.height = "5px";
+		filePathsArea.style.height = (filePathsArea.scrollHeight) + "px";
+	}
+	const text = localStorage.getItem('text-area-for-paths');
 	if (text) {
 		filePathsArea.value = text;
+		autoGrowFilePathArea();
 	}
 	filePathsArea.addEventListener('input', evt => {
 		localStorage.setItem('text-area-for-paths', filePathsArea.value);
+		autoGrowFilePathArea();
 	});
 
 	const button = document.getElementById('load-file-paths');
@@ -1193,6 +1216,7 @@ async function loadExample() {
 			alert('no path given');
 			return;
 		}
+		closePathMenu();
 		const paths = content.split('\n').map(str => str.trim()).filter(str => str !== '');
 		const visConfig = await VisConfig.fromPaths(paths);
 		await visConfig.display();
